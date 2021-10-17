@@ -32,7 +32,8 @@ module Athena::Routing::RouteCompiler
 
   private record CompiledPattern,
     static_prefix : String,
-    regex : Regex,
+    pattern : String,
+    pattern_options : Regex::Options,
     tokens : Array(Token),
     variables : Set(String)
 
@@ -48,7 +49,7 @@ module Athena::Routing::RouteCompiler
       variables = host_variables = pattern.variables
 
       host_tokens = pattern.tokens
-      host_regex = pattern.regex
+      host_regex = pattern.pattern
     end
 
     # TODO: Do something with _locale
@@ -59,13 +60,13 @@ module Athena::Routing::RouteCompiler
 
     path_variables = pattern.variables
 
-    raise "Cannot use _fragment in path param" if path_variables.includes? "_fragmnet"
+    raise "Cannot use _fragment in path param" if path_variables.includes? "_fragment"
 
     variables.concat path_variables
 
     CompiledRoute.new(
       pattern.static_prefix,
-      pattern.regex,
+      pattern.pattern,
       pattern.tokens,
       path_variables,
       host_regex,
@@ -135,17 +136,18 @@ module Athena::Routing::RouteCompiler
       token.type.variable? && !token.important && route.has_default?(token.var_name.not_nil!)
     end
 
-    route_regex = ""
+    route_pattern = ""
     tokens.each_with_index do |token, idx|
-      route_regex += self.compute_regex tokens, idx, first_optional_index
+      route_pattern += self.compute_regex tokens, idx, first_optional_index
     end
-    route_regex = Regex.new "\\A#{route_regex}\\z", (is_host ? Regex::Options::IGNORE_CASE : Regex::Options::None)
+    route_pattern = "/^#{route_pattern}$/"
 
     # Crystal has UTF-8 regex mode enabled by default, so no need to add it.
 
     CompiledPattern.new(
       self.determine_static_prefix(route, tokens),
-      route_regex,
+      route_pattern,
+      (is_host ? Regex::Options::IGNORE_CASE : Regex::Options::None),
       tokens.reverse!,
       variables
     )

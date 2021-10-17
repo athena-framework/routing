@@ -13,7 +13,7 @@ Routing lib.
 dependencies:
   athena-routing:
     github: athena-framework/routing
-    version: ~> 1.0.0
+    version: ~> 0.1.0
 ```
 
 2. Run `shards install`
