@@ -21,17 +21,27 @@ class Athena::Routing::RouteProvider; end
 
 # :nodoc:
 class Athena::Routing::RouteProvider::StaticPrefixCollection
-  getter prefix : String
-  getter items : Array(Tuple(String, ART::Route) | self) = Array(Tuple(String, ART::Route) | self).new
+  # :nodoc:
+  #
+  # name, regex pattern, variables, route, trailing slash?, trailing var?
+  record StaticPrefixTreeRoute, name : String, pattern : String, variables : Set(String), route : ART::Route, has_trailing_slash : Bool, has_trailing_var : Bool
 
-  protected setter items : Array(Tuple(String, ART::Route) | self)
+  # :nodoc:
+  record StaticTreeNamedRoute, name : String, route : ART::Route
+
+  private alias RouteInfo = Array(StaticTreeNamedRoute | StaticPrefixTreeRoute | self)
+
+  getter prefix : String
+  getter items : RouteInfo = RouteInfo.new
+
+  protected setter items : RouteInfo
 
   @static_prefixes = Array(String).new
   @prefixes = Array(String).new
 
   def initialize(@prefix : String = "/"); end
 
-  def add_route(prefix : String, route : Tuple(String, ART::Route) | self) : Nil
+  def add_route(prefix : String, route : StaticTreeNamedRoute | StaticPrefixTreeRoute | self) : Nil
     prefix, static_prefix = self.common_prefix prefix, prefix
 
     idx = @items.size - 1
@@ -48,10 +58,12 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
   end
 
   def populate_collection(routes : ART::RouteCollection) : ART::RouteCollection
-    @items.each do |route|
-      case route
-      in ART::RouteProvider::StaticPrefixCollection then route.populate_collection routes
-      in Tuple(String, ART::Route)                  then routes.add *route
+    @items.each do |item|
+      case item
+      in ART::RouteProvider::StaticPrefixCollection then item.populate_collection routes
+      in StaticTreeNamedRoute                       then routes.add item.name, item.route
+      in StaticPrefixTreeRoute
+        # Skip
       end
     end
 

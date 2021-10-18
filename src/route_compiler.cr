@@ -12,8 +12,7 @@ module Athena::Routing::RouteCompiler
 
     getter type : Type
     getter prefix : String
-    getter pattern_string : String?
-    getter pattern : Regex?
+    getter regex : Regex?
     getter var_name : String?
     getter regex_options : Nil
     getter important : Bool
@@ -21,19 +20,17 @@ module Athena::Routing::RouteCompiler
     def initialize(
       @type : Type,
       @prefix : String,
-      @pattern_string : String? = nil,
+      @regex : Regex? = nil,
       @var_name : String? = nil,
       @regex_options : Nil = nil,
       @important : Bool = false
     )
-      @pattern_string.try { |pattern| @pattern = Regex.new pattern }
     end
   end
 
   private record CompiledPattern,
     static_prefix : String,
-    pattern : String,
-    pattern_options : Regex::Options,
+    regex : Regex,
     tokens : Array(Token),
     variables : Set(String)
 
@@ -49,7 +46,7 @@ module Athena::Routing::RouteCompiler
       variables = host_variables = pattern.variables
 
       host_tokens = pattern.tokens
-      host_regex = pattern.pattern
+      host_regex = pattern.regex
     end
 
     # TODO: Do something with _locale
@@ -66,7 +63,7 @@ module Athena::Routing::RouteCompiler
 
     CompiledRoute.new(
       pattern.static_prefix,
-      pattern.pattern,
+      pattern.regex,
       pattern.tokens,
       path_variables,
       host_regex,
@@ -109,15 +106,15 @@ module Athena::Routing::RouteCompiler
 
       if regex = route.requirements
         # TODO: Handle var specific requirements.
-        regex = ""
+        regex = Regex.new ""
       else
         following_pattern = pattern[pos..]
         next_separator = self.find_next_separator following_pattern
 
-        regex = "[^#{Regex.escape default_separator}#{default_separator != next_separator && "" != next_separator ? Regex.escape(next_separator) : ""}]+"
+        regex = /[^#{Regex.escape default_separator}#{default_separator != next_separator && "" != next_separator ? Regex.escape(next_separator) : ""}]+/
 
         if (!next_separator.empty? && !following_pattern.matches?(/^\{\w+\}/)) || following_pattern.empty?
-          regex += "+"
+          regex = /#{regex.source}+/
         end
       end
 
@@ -140,14 +137,14 @@ module Athena::Routing::RouteCompiler
     tokens.each_with_index do |token, idx|
       route_pattern += self.compute_regex tokens, idx, first_optional_index
     end
-    route_pattern = "/^#{route_pattern}$/"
+
+    route_regex = Regex.new "^#{route_pattern}$", is_host ? Regex::Options::IGNORE_CASE : Regex::Options::None
 
     # Crystal has UTF-8 regex mode enabled by default, so no need to add it.
 
     CompiledPattern.new(
       self.determine_static_prefix(route, tokens),
-      route_pattern,
-      (is_host ? Regex::Options::IGNORE_CASE : Regex::Options::None),
+      route_regex,
       tokens.reverse!,
       variables
     )
@@ -183,9 +180,9 @@ module Athena::Routing::RouteCompiler
     in .text? then Regex.escape token.prefix
     in .variable?
       if idx.zero? && 0 == first_optional_index
-        "#{Regex.escape token.prefix}(?P<#{token.var_name}>#{token.pattern_string})?"
+        "#{Regex.escape token.prefix}(?P<#{token.var_name}>#{token.regex.not_nil!.source})?"
       else
-        regex = "#{Regex.escape token.prefix}(?P<#{token.var_name}>#{token.pattern_string})"
+        regex = "#{Regex.escape token.prefix}(?P<#{token.var_name}>#{token.regex.not_nil!.source})"
 
         if first_optional_index && idx > first_optional_index
           regex = "(?:#{regex}"

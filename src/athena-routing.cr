@@ -14,9 +14,13 @@ module Athena::Routing
 end
 
 collection = ART::RouteCollection.new
-collection.add "app_add", Athena::Routing::Route.new "/add/{val1}/{val2}", "GET"
-collection.add "app_index", Athena::Routing::Route.new "/", "GET"
+collection.add "app_add", dynamic_route = Athena::Routing::Route.new "/add/{val1}/{val2}", "GET"
+collection.add "app_index", static_route = Athena::Routing::Route.new "/", "GET"
 
-provider = ART::RouteProvider.new collection
+# pp dynamic_route.compile
 
-pp provider.static_routes
+ART::RouteProvider.init collection
+
+pp ART::RouteProvider.static_routes
+pp ART::RouteProvider.route_regex
+pp ART::RouteProvider.dynamic_routes
