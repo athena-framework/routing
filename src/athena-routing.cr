@@ -6,6 +6,8 @@ require "./route_collection"
 require "./route_compiler"
 require "./route_provider"
 
+require "./matcher/*"
+
 # Convenience alias to make referencing `Athena::Routing` types easier.
 alias ART = Athena::Routing
 
@@ -22,5 +24,16 @@ collection.add "app_index", static_route = Athena::Routing::Route.new "/", "GET"
 ART::RouteProvider.init collection
 
 pp ART::RouteProvider.static_routes
-pp ART::RouteProvider.route_regex
+pp regex = ART::RouteProvider.route_regex
 pp ART::RouteProvider.dynamic_routes
+
+pp regex.match "/add/10/20"
+
+puts
+puts
+puts
+
+matcher = ART::Matcher::URLMatcher.new
+
+pp matcher.match "/"
+pp matcher.match "/add/10/20"

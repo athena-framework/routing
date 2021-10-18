@@ -29,8 +29,10 @@ class Athena::Routing::RouteProvider
     @@routes = routes
   end
 
-  private def self.routes : ART::RouteCollection
-    @@routes || raise "RouteProvider has not been intialized!"
+  def self.match_host : Bool
+    self.compile unless @@compiled
+
+    @@match_host.not_nil!
   end
 
   def self.static_routes : Hash(String, RouteData)
@@ -260,5 +262,9 @@ class Athena::Routing::RouteProvider
     end
 
     {static_routes, dynamic_routes}
+  end
+
+  private def self.routes : ART::RouteCollection
+    @@routes || raise "RouteProvider has not been intialized!"
   end
 end
