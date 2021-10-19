@@ -1,24 +1,5 @@
 class Athena::Routing::RouteProvider; end
 
-"return [\n
-    false, // $matchHost\n
-    [ // $staticRoutes\n
-        '/' => [[['_route' => 'app_index'], null, null, null, false, false, null]],\n
-    ],\n
-    [ // $regexpList\n
-        0 => '{^(?'\n
-                .'|/add/([^/]++)/([^/]++)(*:29)'\n
-            .')/?$}sD',\n
-    ],\n
-    [ // $dynamicRoutes\n
-        29 => [\n
-            [['_route' => 'app_add'], ['val1', 'val2'], ['GET' => 0], null, false, true, null],\n
-            [null, null, null, null, false, false, 0],\n
-        ],\n
-    ],\n
-    null, // $checkCondition\n
-];\n"
-
 # :nodoc:
 class Athena::Routing::RouteProvider::StaticPrefixCollection
   # :nodoc:

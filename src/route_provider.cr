@@ -18,7 +18,7 @@ class Athena::Routing::RouteProvider
   @@match_host : Bool? = nil
   @@static_routes : Hash(String, RouteData)? = nil
   @@dynamic_routes : Hash(String, RouteData)? = nil
-  @@route_regex : Regex? = nil
+  @@route_regex : ART::FastRegex? = nil
   @@conditions : Hash(String, Condition)? = nil
 
   @@compiled : Bool = false
@@ -47,10 +47,10 @@ class Athena::Routing::RouteProvider
     @@dynamic_routes.not_nil!
   end
 
-  def self.route_regex : Regex
+  def self.route_regex : ART::FastRegex?
     self.compile unless @@compiled
 
-    @@route_regex.not_nil!
+    @@route_regex
   end
 
   private def self.compile : Nil
@@ -89,12 +89,15 @@ class Athena::Routing::RouteProvider
   end
 
   private def self.compile_dynamic_routes(collection : ART::RouteCollection, match_host : Bool, chunk_limit : Int, conditions : Array(Condition)) : Nil
-    raise "FIXME: Empty collection" if collection.empty?
+    dr = Hash(String, RouteData).new
+
+    if collection.empty?
+      return @@dynamic_routes = dr
+    end
 
     # TODO: Handle chunking the regex if too big.
 
     final_pattern = "^(?"
-    dr = Hash(String, RouteData).new
 
     # TODO: Handle diff host values
 
@@ -157,7 +160,7 @@ class Athena::Routing::RouteProvider
 
     final_pattern += ")/?$"
 
-    @@route_regex = Regex.new final_pattern
+    @@route_regex = ART::FastRegex.new final_pattern
     @@dynamic_routes = dr
   end
 

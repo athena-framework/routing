@@ -41,7 +41,7 @@ class Athena::Routing::Matcher::URLMatcher
 
     matched_path = ART::RouteProvider.match_host ? "#{host}.#{path}" : path
 
-    ART::RouteProvider.route_regex.match(matched_path).try do |match|
+    ART::RouteProvider.route_regex.try &.match(matched_path).try do |match|
       ART::RouteProvider.dynamic_routes[match.mark.not_nil!]?.try do |data, vars, method, schemas, has_trailing_slash, has_trailing_var, condition|
         # TODO: Apply condition
 
