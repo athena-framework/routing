@@ -15,15 +15,36 @@ class Athena::Routing::RouteProvider
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String
   private record PreCompiledDynamicRoute, pattern : String, routes : ART::RouteCollection
 
+  private class State
+    property vars : Set(String) = Set(String).new
+    property host_vars : Set(String) = Set(String).new
+    property mark : Int32 = 0
+    property mark_tail : Int32 = 0
+    getter routes : Hash(Int32, RouteData)
+    property regex : String = ""
+
+    def initialize(@routes : Hash(Int32, RouteData)); end
+
+    def vars(subject : String) : String
+      subject.gsub(/\?P<([^>]++)>/) do |_, match|
+        next "?:" if "_route" == match[1]
+
+        @vars << match[1].to_s
+
+        ""
+      end
+    end
+  end
+
   @@match_host : Bool? = nil
   @@static_routes : Hash(String, RouteData)? = nil
-  @@dynamic_routes : Hash(String, RouteData)? = nil
-  @@route_regex : ART::FastRegex? = nil
+  @@dynamic_routes : Hash(Int32, RouteData)? = nil
+  @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
   @@conditions : Hash(String, Condition)? = nil
 
   @@compiled : Bool = false
 
-  def self.init(routes : ART::RouteCollection)
+  def self.compile(routes : ART::RouteCollection) : Nil
     return unless @@routes.nil?
 
     @@routes = routes
@@ -41,16 +62,16 @@ class Athena::Routing::RouteProvider
     @@static_routes.not_nil!
   end
 
-  def self.dynamic_routes : Hash(String, RouteData)
+  def self.dynamic_routes : Hash(Int32, RouteData)
     self.compile unless @@compiled
 
     @@dynamic_routes.not_nil!
   end
 
-  def self.route_regex : ART::FastRegex?
+  def self.route_regexes : Hash(Int32, ART::FastRegex)
     self.compile unless @@compiled
 
-    @@route_regex
+    @@route_regexes
   end
 
   private def self.compile : Nil
@@ -83,85 +104,147 @@ class Athena::Routing::RouteProvider
 
     chunk_limit = dynamic_routes.size
 
-    self.compile_dynamic_routes dynamic_routes, match_host, chunk_limit, conditions
+    loop do
+      self.compile_dynamic_routes dynamic_routes, match_host, chunk_limit, conditions
+      break
+    rescue e : ArgumentError
+      if 1 < chunk_limit && e.message.try(&.starts_with?("regular expression is too large"))
+        chunk_limit = 1 + (chunk_limit >> 1)
+        next
+      end
+
+      raise e
+    end
 
     @@compiled = true
   end
 
   private def self.compile_dynamic_routes(collection : ART::RouteCollection, match_host : Bool, chunk_limit : Int, conditions : Array(Condition)) : Nil
-    dr = Hash(String, RouteData).new
+    dr = Hash(Int32, RouteData).new
 
     if collection.empty?
       return @@dynamic_routes = dr
     end
 
-    # TODO: Handle chunking the regex if too big.
+    state = State.new dr
 
-    final_pattern = "^(?"
-
-    # TODO: Handle diff host values
-
-    previous_regex : Regex? = nil
-    tree = ART::RouteProvider::StaticPrefixCollection.new
+    chunk_size = 0
+    routes = nil
+    collections = Array(ART::RouteCollection).new
 
     collection.each do |name, route|
-      # TODO: Handle matching host
-      matched_regex = route.compile.regex.source.match(/\^(.*)\$$/).not_nil!
-
-      vars = Set(String).new
-      pattern = matched_regex[1].gsub(/\?P<([^>]++)>/) do |_, match|
-        next "?:" if "_route" == match[1]
-
-        vars << match[1].to_s
-
-        ""
+      if chunk_limit < (chunk_size += 1) || routes.nil?
+        chunk_size = 1
+        routes = ART::RouteCollection.new
+        collections << routes
       end
 
-      if has_trailing_slash = "/" != pattern && pattern.ends_with? '/'
-        pattern = pattern.rchop '/'
-      end
-
-      has_trailing_var = route.path.matches? /\{\w+\}\/?$/
-
-      tree.add_route pattern, ART::RouteProvider::StaticPrefixCollection::StaticPrefixTreeRoute.new name, pattern, vars, route, has_trailing_slash, has_trailing_var
+      routes.not_nil!.add name, route
     end
 
+    collections.each do |collection|
+      previous_regex = false
+      per_host_routes = Hash(Regex?, ART::RouteCollection).new
+      host_routes = nil
+
+      collection.each do |name, route|
+        regex = route.compile.host_regex
+        if previous_regex != regex
+          host_routes = ART::RouteCollection.new
+          per_host_routes[regex] = host_routes
+          previous_regex = regex
+        end
+
+        host_routes.not_nil!.add name, route
+      end
+
+      previous_regex = false
+      final_regex = "^(?"
+      starting_mark = state.mark
+      state.mark += final_regex.size + 1 # Add 1 to account for the eventual `/`.
+      state.regex = final_regex
+
+      per_host_routes.each do |host_regex, routes|
+        # TODO: Match host: 316
+
+        tree = ART::RouteProvider::StaticPrefixCollection.new
+
+        routes.each do |name, route|
+          # TODO: Handle matching host
+          matched_regex = route.compile.regex.source.match(/\^(.*)\$$/).not_nil!
+
+          state.vars = Set(String).new
+          pattern = state.vars matched_regex[1]
+
+          if has_trailing_slash = "/" != pattern && pattern.ends_with? '/'
+            pattern = pattern.rchop '/'
+          end
+
+          has_trailing_var = route.path.matches? /\{\w+\}\/?$/
+
+          tree.add_route pattern, ART::RouteProvider::StaticPrefixCollection::StaticPrefixTreeRoute.new name, pattern, state.vars, route, has_trailing_slash, has_trailing_var
+        end
+
+        self.compile_static_prefix_collection tree, state, 0, conditions
+      end
+
+      if match_host
+        state.regex += ")"
+      end
+
+      state.regex += ")/?$"
+      state.mark_tail = 0
+
+      @@route_regexes[starting_mark] = ART::FastRegex.new state.regex
+    end
+
+    @@dynamic_routes = state.routes
+  end
+
+  private def self.compile_static_prefix_collection(tree : ART::RouteProvider::StaticPrefixCollection, state : State, prefix_length : Int32, conditions) : Nil
     previous_regex = nil
-    prefix_len = 0
 
     tree.items.each do |item|
       case item
       in ART::RouteProvider::StaticPrefixCollection
+        pp "fooo"
+
         previous_regex = nil
-        prefix = item.prefix[prefix_len..]
+        prefix = item.prefix[prefix_length..]
         pattern = "|#{prefix}(?"
-        final_pattern += pattern
-        final_pattern += ")"
+        state.mark += pattern.size
+        state.regex += pattern
+
+        self.compile_static_prefix_collection item, state, prefix_length + pp(prefix.size), conditions
+
+        state.regex += ")"
+        state.mark_tail += 1
+
         next
       in ART::RouteProvider::StaticPrefixCollection::StaticPrefixTreeRoute
         compiled_route = item.route.compile
-
-        # TODO: Merge in host vars.
-        vars = item.variables
+        vars = item.variables + state.host_vars
 
         if compiled_route.regex == previous_regex
+          state.routes[state.mark] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
           next
         end
 
-        final_pattern += "|#{item.pattern}(*:10)"
+        # pp prefix_length
 
-        dr["10"] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
+        state.mark += 3 + state.mark_tail + item.pattern.size - prefix_length
+        state.mark_tail = 2 + state.mark.digits.size
+
+        # pp state.mark, state.mark_tail
+
+        state.regex += "|#{item.pattern[prefix_length..]}(*:#{state.mark})"
+
+        previous_regex = compiled_route.regex
+        state.routes[state.mark] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute
         raise "BUG: StaticTreeNamedRoute"
       end
     end
-
-    # TODO: Handle matching host.
-
-    final_pattern += ")/?$"
-
-    @@route_regex = ART::FastRegex.new final_pattern
-    @@dynamic_routes = dr
   end
 
   private alias StaticRoutes = Hash(String, Hash(String, PreCompiledStaticRoute))

@@ -17,8 +17,8 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
 
   protected setter items : RouteInfo
 
-  @static_prefixes = Array(String).new
-  @prefixes = Array(String).new
+  protected getter static_prefixes = Array(String).new
+  protected getter prefixes = Array(String).new
 
   def initialize(@prefix : String = "/"); end
 
@@ -26,11 +26,44 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
     prefix, static_prefix = self.common_prefix prefix, prefix
 
     idx = @items.size - 1
-
     while 0 <= idx
+      item = @items[idx]
+
       common_prefix, common_static_prefix = self.common_prefix prefix, @prefix
 
-      idx -= 1
+      pp @prefix, common_prefix
+
+      if @prefix == common_prefix
+        if @prefix != static_prefix && @prefix != @static_prefixes[idx]
+          idx -= 1
+          next
+        end
+
+        break if @prefix == static_prefix && @prefix == @static_prefixes[idx]
+        break if @prefixes[idx] != @static_prefixes[idx] && @prefix == @static_prefixes[idx]
+        break if prefix != static_prefix && @prefix == static_prefix
+
+        idx -= 1
+
+        next
+      end
+
+      if item.is_a? self && @prefixes[idx] == common_prefix
+        pp "yes"
+        item.add_route prefix, route
+      else
+        child = self.class.new common_prefix
+        child.prefixes[0], child.static_prefixes[0] = child.common_prefix @prefixes[idx], @prefixes[idx]
+        child.prefixes[1], child.static_prefixes[1] = child.common_prefix prefix, prefix
+        child.items << @items[idx]
+        child.items << route
+
+        @static_prefixes[idx] = common_static_prefix
+        @prefixes[idx] = common_prefix
+        @items[idx] = child
+      end
+
+      return
     end
 
     @static_prefixes << static_prefix
@@ -51,7 +84,7 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
     routes
   end
 
-  private def common_prefix(prefix : String, other_prefix : String) : Tuple(String, String)
+  protected def common_prefix(prefix : String, other_prefix : String) : Tuple(String, String)
     base_length = @prefix.size
     end_size = Math.min(prefix.size, other_prefix.size)
     static_length = nil

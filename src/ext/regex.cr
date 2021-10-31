@@ -1,5 +1,7 @@
 require "./lib_pcre2"
 
+# :nodoc:
+#
 # Specialized re-implementation of stdlib's regex, but with `PCRE2` using the fast track API.
 class Athena::Routing::FastRegex
   struct MatchData

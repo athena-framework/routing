@@ -19,19 +19,25 @@ end
 athena_routes = ART::RouteCollection.new
 athena_routes.add "root", ART::Route.new "/get", "GET"
 # athena_routes.add "alphabet", ART::Route.new "/get/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z", "GET"
+# athena_routes.add "alphabet2", ART::Route.new "/get/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/2", "GET"
 # athena_routes.add "book_chapters", ART::Route.new "/get/books/{id}/chapters", "GET"
-athena_routes.add "variable_alphabet", ART::Route.new "/get/var/{b}/{c}/{d}/{e}/{f}/{g}/{h}/{i}/{j}/{k}/{l}/{m}/{n}/{o}/{p}/{q}/{r}/{s}/{t}/{u}/{v}/{w}/{x}/{y}/{z}", "GET"
+# athena_routes.add "variable_alphabet", ART::Route.new "/get/var/{b}/{c}/{d}/{e}/{f}/{g}/{h}/{i}/{j}/{k}/{l}/{m}/{n}/{o}/{p}/{q}/{r}/{s}/{t}/{u}/{v}/{w}/{x}/{y}/{z}", "GET"
 
 # # # pp dynamic_route.compile
 
-ART::RouteProvider.init athena_routes
+1000.times do |idx|
+  hash = Random::DEFAULT.hex 3
+  athena_routes.add "Route#{idx}", ART::Route.new "/#{hash}/{a}/{b}/{c}/#{hash}", "GET"
+end
+
+ART::RouteProvider.compile athena_routes
 
 # LibGC.set_warn_proc ->(_msg, _v) { raise "wtf" }
 # # pp ART::RouteProvider.static_routes
-pp regex = ART::RouteProvider.route_regex
-# # pp ART::RouteProvider.dynamic_routes
-# # pp regex.match "/add/10/20"
-
+regex = ART::RouteProvider.route_regexes
+pp regex.keys
+# pp ART::RouteProvider.dynamic_routes
+# puts regex.match "/add/10/20"
 # # puts
 # # puts
 # # puts

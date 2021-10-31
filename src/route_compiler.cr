@@ -170,6 +170,8 @@ module Athena::Routing::RouteCompiler
     return "" if pattern.empty?
     return "" if (pattern = pattern.gsub(/\{\w+\}/, "")).empty?
 
+    pattern = pattern[0].to_s
+
     SEPARATORS.includes?(pattern) ? pattern : ""
   end
 
