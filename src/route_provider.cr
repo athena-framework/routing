@@ -207,15 +207,13 @@ class Athena::Routing::RouteProvider
     tree.items.each do |item|
       case item
       in ART::RouteProvider::StaticPrefixCollection
-        pp "fooo"
-
         previous_regex = nil
         prefix = item.prefix[prefix_length..]
         pattern = "|#{prefix}(?"
         state.mark += pattern.size
         state.regex += pattern
 
-        self.compile_static_prefix_collection item, state, prefix_length + pp(prefix.size), conditions
+        self.compile_static_prefix_collection item, state, prefix_length + prefix.size, conditions
 
         state.regex += ")"
         state.mark_tail += 1
@@ -230,12 +228,9 @@ class Athena::Routing::RouteProvider
           next
         end
 
-        # pp prefix_length
-
+        pp item.pattern
         state.mark += 3 + state.mark_tail + item.pattern.size - prefix_length
         state.mark_tail = 2 + state.mark.digits.size
-
-        # pp state.mark, state.mark_tail
 
         state.regex += "|#{item.pattern[prefix_length..]}(*:#{state.mark})"
 
@@ -243,6 +238,8 @@ class Athena::Routing::RouteProvider
         state.routes[state.mark] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute
         raise "BUG: StaticTreeNamedRoute"
+      in ART::RouteProvider::StaticPrefixCollection::StaticTreeName
+        raise "BUG: StaticTreeName"
       end
     end
   end

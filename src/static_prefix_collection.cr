@@ -9,8 +9,9 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
 
   # :nodoc:
   record StaticTreeNamedRoute, name : String, route : ART::Route
+  record StaticTreeName, name : String
 
-  private alias RouteInfo = Array(StaticTreeNamedRoute | StaticPrefixTreeRoute | self)
+  private alias RouteInfo = Array(StaticTreeNamedRoute | StaticPrefixTreeRoute | StaticTreeName | self)
 
   getter prefix : String
   getter items : RouteInfo = RouteInfo.new
@@ -22,16 +23,14 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
 
   def initialize(@prefix : String = "/"); end
 
-  def add_route(prefix : String, route : StaticTreeNamedRoute | StaticPrefixTreeRoute | self) : Nil
+  def add_route(prefix : String, route : StaticTreeNamedRoute | StaticPrefixTreeRoute | StaticTreeName | self) : Nil
     prefix, static_prefix = self.common_prefix prefix, prefix
 
     idx = @items.size - 1
     while 0 <= idx
       item = @items[idx]
 
-      common_prefix, common_static_prefix = self.common_prefix prefix, @prefix
-
-      pp @prefix, common_prefix
+      common_prefix, common_static_prefix = self.common_prefix prefix, @prefixes[idx]
 
       if @prefix == common_prefix
         if @prefix != static_prefix && @prefix != @static_prefixes[idx]
@@ -49,12 +48,17 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
       end
 
       if item.is_a? self && @prefixes[idx] == common_prefix
-        pp "yes"
         item.add_route prefix, route
       else
         child = self.class.new common_prefix
-        child.prefixes[0], child.static_prefixes[0] = child.common_prefix @prefixes[idx], @prefixes[idx]
-        child.prefixes[1], child.static_prefixes[1] = child.common_prefix prefix, prefix
+        common_child_prefix, common_child_static_prefix = child.common_prefix @prefixes[idx], @prefixes[idx]
+        child.prefixes << common_child_prefix
+        child.static_prefixes << common_child_static_prefix
+
+        common_child_prefix, common_child_static_prefix = child.common_prefix prefix, prefix
+        child.prefixes << common_child_prefix
+        child.static_prefixes << common_child_static_prefix
+
         child.items << @items[idx]
         child.items << route
 
@@ -76,7 +80,7 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
       case item
       in ART::RouteProvider::StaticPrefixCollection then item.populate_collection routes
       in StaticTreeNamedRoute                       then routes.add item.name, item.route
-      in StaticPrefixTreeRoute
+      in StaticPrefixTreeRoute, StaticTreeName
         # Skip
       end
     end
