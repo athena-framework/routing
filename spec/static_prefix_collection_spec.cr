@@ -6,7 +6,7 @@ struct StaticPrefixCollectionTest < ASPEC::TestCase
     collection = ART::RouteProvider::StaticPrefixCollection.new "/"
 
     routes.each do |(path, name)|
-      static_prefix = (route = ART::Route.new(path, "GET")).compile.static_prefix
+      static_prefix = (route = ART::Route.new(path)).compile.static_prefix
       collection.add_route static_prefix, ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute.new name, route
     end
 

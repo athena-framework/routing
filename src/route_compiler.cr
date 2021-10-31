@@ -104,9 +104,8 @@ module Athena::Routing::RouteCompiler
         tokens << Token.new :text, preceding_text
       end
 
-      if regex = route.requirements
-        # TODO: Handle var specific requirements.
-        regex = Regex.new ""
+      if regex = route.requirement var_name
+        regex = self.transform_capturing_groups_to_non_capturings regex.source
       else
         following_pattern = pattern[pos..]
         next_separator = self.find_next_separator following_pattern
@@ -198,5 +197,30 @@ module Athena::Routing::RouteCompiler
         regex
       end
     end
+  end
+
+  private def self.transform_capturing_groups_to_non_capturings(source : String) : Regex
+    idx = 0
+    while idx < source.size
+      if '\\' == source[idx]
+        idx += 2
+        next
+      end
+
+      if '(' != source[idx] || source[idx + 2]?.nil?
+        idx += 1
+        next
+      end
+
+      if '*' == source[(idx += 1)] || '?' == source[idx]
+        idx += 2
+        next
+      end
+
+      source = source.insert idx, "?:"
+      idx += 1
+    end
+
+    Regex.new source
   end
 end

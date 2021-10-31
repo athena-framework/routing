@@ -8,8 +8,8 @@ class Athena::Routing::RouteProvider
   private alias Condition = Proc(HTTP::Request, Bool)
 
   # We store this as a tuple in order to get splatting/unpacking features.
-  # defaults, variables, method, schemas, trailing slash? trailing var?, condition
-  private alias RouteData = Tuple(Hash(String, String?), Set(String)?, String, Set(String)?, Bool, Bool, Condition?)
+  # defaults, variables, methods, schemas, trailing slash?, trailing var?, conditions
+  private alias RouteData = Tuple(Hash(String, String?), Set(String)?, Set(String)?, Set(String)?, Bool, Bool, Condition?)
 
   private record PreCompiledStaticRoute, route : ART::Route, has_trailing_slash : Bool
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String
@@ -20,10 +20,10 @@ class Athena::Routing::RouteProvider
     property host_vars : Set(String) = Set(String).new
     property mark : Int32 = 0
     property mark_tail : Int32 = 0
-    getter routes : Hash(Int32, RouteData)
+    getter routes : Hash(String, RouteData)
     property regex : String = ""
 
-    def initialize(@routes : Hash(Int32, RouteData)); end
+    def initialize(@routes : Hash(String, RouteData)); end
 
     def vars(subject : String) : String
       subject.gsub(/\?P<([^>]++)>/) do |_, match|
@@ -36,13 +36,13 @@ class Athena::Routing::RouteProvider
     end
   end
 
-  @@match_host : Bool? = nil
-  @@static_routes : Hash(String, RouteData)? = nil
-  @@dynamic_routes : Hash(Int32, RouteData)? = nil
+  @@match_host : Bool = false
+  @@static_routes : Hash(String, RouteData) = Hash(String, RouteData).new
+  @@dynamic_routes : Hash(String, RouteData) = Hash(String, RouteData).new
   @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
   @@conditions : Hash(String, Condition)? = nil
 
-  @@compiled : Bool = false
+  class_getter compiled : Bool = false
 
   def self.compile(routes : ART::RouteCollection) : Nil
     return unless @@routes.nil?
@@ -53,19 +53,19 @@ class Athena::Routing::RouteProvider
   def self.match_host : Bool
     self.compile unless @@compiled
 
-    @@match_host.not_nil!
+    @@match_host
   end
 
   def self.static_routes : Hash(String, RouteData)
     self.compile unless @@compiled
 
-    @@static_routes.not_nil!
+    @@static_routes
   end
 
-  def self.dynamic_routes : Hash(Int32, RouteData)
+  def self.dynamic_routes : Hash(String, RouteData)
     self.compile unless @@compiled
 
-    @@dynamic_routes.not_nil!
+    @@dynamic_routes
   end
 
   def self.route_regexes : Hash(Int32, ART::FastRegex)
@@ -120,7 +120,7 @@ class Athena::Routing::RouteProvider
   end
 
   private def self.compile_dynamic_routes(collection : ART::RouteCollection, match_host : Bool, chunk_limit : Int, conditions : Array(Condition)) : Nil
-    dr = Hash(Int32, RouteData).new
+    dr = Hash(String, RouteData).new
 
     if collection.empty?
       return @@dynamic_routes = dr
@@ -224,18 +224,17 @@ class Athena::Routing::RouteProvider
         vars = item.variables + state.host_vars
 
         if compiled_route.regex == previous_regex
-          state.routes[state.mark] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
+          state.routes[state.mark.to_s] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
           next
         end
 
-        pp item.pattern
         state.mark += 3 + state.mark_tail + item.pattern.size - prefix_length
         state.mark_tail = 2 + state.mark.digits.size
 
         state.regex += "|#{item.pattern[prefix_length..]}(*:#{state.mark})"
 
         previous_regex = compiled_route.regex
-        state.routes[state.mark] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
+        state.routes[state.mark.to_s] = self.compile_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute
         raise "BUG: StaticTreeNamedRoute"
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeName
@@ -290,7 +289,7 @@ class Athena::Routing::RouteProvider
     {
       Hash(String, String?){"_route" => name}.merge!(defaults),
       vars,
-      route.method,
+      route.methods,
       route.schemas,
       has_trailing_slash,
       has_trailing_var,
