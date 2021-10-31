@@ -75,6 +75,14 @@ struct RouteTest < ASPEC::TestCase
     route.has_requirement("missing").should be_false
   end
 
+  def test_compile : Nil
+    route = ART::Route.new "/{foo}"
+    compiled_route = route.compile
+    route.compile.should eq compiled_route
+    route.set_requirement "foo", /\d+/
+    route.compile.should_not eq compiled_route
+  end
+
   @[DataProvider("inline_settings_provider")]
   def test_inline_defaults_and_requirements(expected : ART::Route, actual : ART::Route) : Nil
     expected.should eq actual

@@ -49,7 +49,14 @@ module Athena::Routing::RouteCompiler
       host_regex = pattern.regex
     end
 
-    # TODO: Do something with _locale
+    if (locale = route.default "_locale") && !route.default("_canonical_route").nil? && route.requirement("_locale").try &.source == Regex.escape(locale)
+      requirements = route.requirements
+      requirements.delete "_locale"
+
+      # TODO: Pretty sure this deletes via reference
+      route.requirements = requirements
+      route.path = route.path.sub "{_locale}", locale
+    end
 
     path = route.path
 
@@ -128,8 +135,19 @@ module Athena::Routing::RouteCompiler
       tokens << Token.new :text, pattern[pos..]
     end
 
-    first_optional_index = tokens.index do |token|
-      token.type.variable? && !token.important && route.has_default?(token.var_name.not_nil!)
+    first_optional_index = Int32::MAX
+
+    unless is_host
+      idx = tokens.size - 1
+
+      while idx >= 0
+        token = tokens[idx]
+
+        break unless token.type.variable? && !token.important && route.has_default?(token.var_name.not_nil!)
+
+        first_optional_index = idx
+        idx -= 1
+      end
     end
 
     route_pattern = ""
@@ -174,7 +192,7 @@ module Athena::Routing::RouteCompiler
     SEPARATORS.includes?(pattern) ? pattern : ""
   end
 
-  private def self.compute_regex(tokens : Array(Token), idx : Int, first_optional_index : Int?) : String
+  private def self.compute_regex(tokens : Array(Token), idx : Int, first_optional_index : Int) : String
     token = tokens[idx]
 
     case token.type
@@ -185,7 +203,7 @@ module Athena::Routing::RouteCompiler
       else
         regex = "#{Regex.escape token.prefix}(?P<#{token.var_name}>#{token.regex.not_nil!.source})"
 
-        if first_optional_index && idx > first_optional_index
+        if idx >= first_optional_index
           regex = "(?:#{regex}"
           num_tokens = tokens.size
 
