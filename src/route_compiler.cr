@@ -43,7 +43,8 @@ module Athena::Routing::RouteCompiler
     if host = route.host.presence
       pattern = self.compile_pattern route, host, true
 
-      variables = host_variables = pattern.variables
+      host_variables = pattern.variables
+      variables = host_variables.dup
 
       host_tokens = pattern.tokens
       host_regex = pattern.regex
@@ -64,7 +65,7 @@ module Athena::Routing::RouteCompiler
 
     path_variables = pattern.variables
 
-    raise "Cannot use _fragment in path param" if path_variables.includes? "_fragment"
+    raise ART::Exceptions::Logic.new "Route pattern '#{route.path}' cannot contain '_fragment' as a path parameter." if path_variables.includes? "_fragment"
 
     variables.concat path_variables
 
@@ -101,9 +102,9 @@ module Athena::Routing::RouteCompiler
       preceding_char = preceding_text.empty? ? "" : preceding_text[-1].to_s
       is_separator = !preceding_char.empty? && SEPARATORS.includes?(preceding_char)
 
-      raise "Can't start with digit" if var_name.starts_with? /\d/
-      raise "Used more than once" unless variables.add? var_name
-      raise "Too long" if var_name.size > MAX_LENGTH
+      raise ART::Exceptions::Logic.new "Variable name '#{var_name}' cannot start with a digit in route pattern '#{pattern}'." if var_name.starts_with? /\d/
+      raise ART::Exceptions::Logic.new "Route pattern '#{pattern}' cannot reference variable name '#{var_name}' more than once." unless variables.add? var_name
+      raise ART::Exceptions::Logic.new "Variable name '#{var_name}' cannot be longer than #{MAX_LENGTH} characters in route pattern '#{pattern}'." if var_name.size > MAX_LENGTH
 
       if is_separator && preceding_text != preceding_char
         tokens << Token.new :text, preceding_text[0...-preceding_char.size]

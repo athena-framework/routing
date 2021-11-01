@@ -1,12 +1,14 @@
 require "./ext/*"
 
 require "http/request"
+
 require "./compiled_route"
 require "./route"
 require "./route_collection"
 require "./route_compiler"
 require "./route_provider"
 
+require "./exceptions/*"
 require "./matcher/*"
 
 # Convenience alias to make referencing `Athena::Routing` types easier.
