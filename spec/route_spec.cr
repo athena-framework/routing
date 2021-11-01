@@ -61,8 +61,8 @@ struct RouteTest < ASPEC::TestCase
 
   def test_requirements : Nil
     route = ART::Route.new "/{foo}"
-    route.requirements = {"foo" => /\d+/}
-    route.requirements.should eq({"foo" => /\d+/})
+    route.requirements = {"foo" => /\d+/, "bar" => "foo"}
+    route.requirements.should eq({"foo" => /\d+/, "bar" => /foo/})
 
     route.requirement("foo").should eq /\d+/
     route.requirement("missing").should be_nil
@@ -73,6 +73,11 @@ struct RouteTest < ASPEC::TestCase
 
     route.has_requirement("foo").should be_true
     route.has_requirement("missing").should be_false
+
+    route.requirements = Hash(String, Regex | String).new
+    route.set_requirement "foo", "foo"
+    route.set_requirement "bar", /bar/
+    route.requirements.should eq({"foo" => /foo/, "bar" => /bar/})
   end
 
   def test_compile : Nil

@@ -17,7 +17,7 @@ class Athena::Routing::Route
   def initialize(
     @path : String,
     defaults : Hash(String, String?) = Hash(String, String?).new,
-    requirements : Hash(String, Regex) = Hash(String, Regex).new,
+    requirements : Hash(String, Regex | String) = Hash(String, Regex | String).new,
     @host : String? = nil,
     methods : String | Enumerable(String)? = nil,
     schemas : String | Enumerable(String)? = nil
@@ -117,19 +117,19 @@ class Athena::Routing::Route
     @requirements[key]?
   end
 
-  def requirements=(requirements : Hash(String, Regex)) : self
+  def requirements=(requirements : Hash(String, Regex | String)) : self
     @requirements.clear
 
     self.add_requirements requirements
   end
 
-  def add_requirements(requirements : Hash(String, Regex)) : self
+  def add_requirements(requirements : Hash(String, Regex | String)) : self
     if requirements.has_key?("_locale") && self.localized?
       requirements.delete "_locale"
     end
 
     requirements.each do |key, regex|
-      @requirements[key] = self.sanitize_requirement key, regex.source
+      @requirements[key] = self.sanitize_requirement key, regex
     end
 
     @compiled_route = nil
