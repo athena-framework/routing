@@ -42,19 +42,19 @@ struct RouteProviderTest < ASPEC::TestCase
     collection.add "barhead", ART::Route.new "/barhead/{foo}", methods: {"GET"}
 
     # Simple
-    collection.add "baz", ART::Route.new "/text/baz"
+    collection.add "baz", ART::Route.new "/test/baz"
 
     # Simple with extension
-    collection.add "baz2", ART::Route.new "/text/baz.html"
+    collection.add "baz2", ART::Route.new "/test/baz.html"
 
     # Trailing slash
-    collection.add "baz3", ART::Route.new "/text/baz3/"
+    collection.add "baz3", ART::Route.new "/test/baz3/"
 
     # Trailing slash with variable
-    collection.add "baz4", ART::Route.new "/text/{foo}/"
+    collection.add "baz4", ART::Route.new "/test/{foo}/"
 
     # Trailing slash and method
-    collection.add "baz5", ART::Route.new "/text/{foo}/", methods: "post"
+    collection.add "baz5", ART::Route.new "/test/{foo}/", methods: "post"
 
     # Complex name
     collection.add "baz.baz6", ART::Route.new "/test/{foo}", methods: "put"

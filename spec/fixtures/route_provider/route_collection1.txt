@@ -3,13 +3,29 @@ true
 
 
 {
-  "/overridden" => { {"_route" => "overridden"}, nil, nil, nil, false, false, nil},
+  "/test/baz" => { {"_route" => "baz"}, nil, nil, nil, false, false, nil},
+  "/test/baz.html" => { {"_route" => "baz2"}, nil, nil, nil, false, false, nil},
+  "/test/baz3" => { {"_route" => "baz3"}, nil, nil, nil, true, false, nil},
+  "/foofoo" => { {"_route" => "foofoo", "def" => "test"}, nil, nil, nil, false, false, nil},
+  "/spa ce" => { {"_route" => "space"}, nil, nil, nil, false, false, nil},
+  "/multi/new" => { {"_route" => "overridden2"}, nil, nil, nil, false, false, nil},
+  "/multi/hey" => { {"_route" => "hey"}, nil, nil, nil, true, false, nil},
+  "/ababa" => { {"_route" => "ababa"}, nil, nil, nil, false, false, nil},
+  "/route1" => { {"_route" => "route1"}, "a.example.com", nil, nil, false, false, nil},
+  "/c2/route2" => { {"_route" => "route2"}, "a.example.com", nil, nil, false, false, nil},
+  "/route4" => { {"_route" => "route4"}, "a.example.com", nil, nil, false, false, nil},
+  "/c2/route3" => { {"_route" => "route3"}, "b.example.com", nil, nil, false, false, nil},
+  "/route5" => { {"_route" => "route5"}, "c.example.com", nil, nil, false, false, nil},
+  "/route6" => { {"_route" => "route6"}, nil, nil, nil, false, false, nil},
+  "/route11" => { {"_route" => "route11"}, /^(?P<var1>[^\.]++)\.example\.com$/i, nil, nil, false, false, nil},
+  "/route12" => { {"_route" => "route12", "var1" => "val"}, /^(?P<var1>[^\.]++)\.example\.com$/i, nil, nil, false, false, nil},
+  "/route17" => { {"_route" => "route17"}, nil, nil, nil, false, false, nil}
 }
 
 
 
 {
-  0 => ART::FastRegex.new "^(?|\/foo\/(baz|athenaa)(*:25)|\/bar\/([^\/]++)(*:45))\/?$"
+  0 => ART::FastRegex.new "^(?|(?:(?:[^./]*+\.)++)(?|/foo/(baz|athenaa)(*:47)|/bar(?|/([^/]++)(*:70)|head/([^/]++)(*:90))|/test/([^/]++)(?|(*:115))|/([']+)(*:131)|/a/(?|b'b/([^/]++)(?|(*:160)|(*:168))|(.*)(*:181)|b'b/([^/]++)(?|(*:204)|(*:212)))|/multi/hello(?:/([^/]++))?(*:248)|/([^/]++)/b/([^/]++)(?|(*:279)|(*:287))|/aba/([^/]++)(*:309))|(?i:([^\.]++)\.example\.com)\.(?|/route1(?|3/([^/]++)(*:371)|4/([^/]++)(*:389)))|(?i:c\.example\.com)\.(?|/route15/([^/]++)(*:441))|(?:(?:[^./]*+\.)++)(?|/route16/([^/]++)(*:489)|/a/(?|a\.\.\.(*:510)|b/(?|([^/]++)(*:531)|c/([^/]++)(*:549)))))/?$"
 }
 
 
