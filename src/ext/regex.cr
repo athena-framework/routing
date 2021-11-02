@@ -81,6 +81,24 @@ class Athena::Routing::FastRegex
     Athena::Routing::FastRegex::MatchData.new(str, LibPCRE2.get_ovector(@match_data), @capture_count, ((mark = LibPCRE2.get_mark(@match_data)) ? String.new(mark) : nil))
   end
 
+  def inspect(io : IO) : Nil
+    io << '/'
+    reader = Char::Reader.new(@source)
+    while reader.has_next?
+      case char = reader.current_char
+      when '\\'
+        io << '\\'
+        io << reader.next_char
+      when '/'
+        io << "\\/"
+      else
+        io << char
+      end
+      reader.next_char
+    end
+    io << '/'
+  end
+
   private def internal_matches(str, byte_index)
     unless (match = LibPCRE2.jit_match @code, str, str.bytesize, byte_index, 0, @match_data, nil) > 0
       bytes = Bytes.new 128
@@ -89,22 +107,3 @@ class Athena::Routing::FastRegex
     end
   end
 end
-
-# FAST_REGEX = Athena::Routing::FastRegex.new "^(?|/add/([^/]++)(?:/([^/]++))?(*:34))/?$"
-# REGEX      = Regex.new "^(?|/add/([^/]++)(?:/([^/]++))?(*:34))/?$"
-# SUBJECT    = "/add/10/20"
-
-# require "benchmark"
-
-# Benchmark.ips do |r|
-#   r.report "FastRegex" do
-#     FAST_REGEX.match SUBJECT
-#   end
-
-#   r.report "::Regex" do
-#     REGEX.match SUBJECT
-#   end
-# end
-
-# # FastRegex  23.38M ( 42.78ns) (± 1.13%)  16.0B/op        fastest
-# #   ::Regex   6.58M (151.97ns) (± 0.68%)  48.0B/op   3.55× slower

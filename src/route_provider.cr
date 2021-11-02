@@ -74,6 +74,18 @@ class Athena::Routing::RouteProvider
     @@route_regexes
   end
 
+  def self.inspect(io : IO) : Nil
+    io << "Match Host:  "
+    self.match_host.inspect io
+    io << "\n\nStatic Routes:  "
+    self.static_routes.inspect io
+    io << "\n\nRegexes:  "
+    self.route_regexes.inspect io
+    io << "\n\nDynamic Routes:  "
+    self.dynamic_routes.inspect io
+    io << "\n\n"
+  end
+
   private def self.compile : Nil
     match_host = false
     routes = ART::RouteProvider::StaticPrefixCollection.new
