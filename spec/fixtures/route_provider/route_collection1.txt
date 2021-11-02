@@ -1,0 +1,20 @@
+true
+
+
+
+{
+  "/overridden" => { {"_route" => "overridden"}, nil, nil, nil, false, false, nil},
+}
+
+
+
+{
+  0 => ART::FastRegex.new "^(?|\/foo\/(baz|athenaa)(*:25)|\/bar\/([^\/]++)(*:45))\/?$"
+}
+
+
+
+{
+   "25" => { {"_route" => "foo", "def" => "test"}, Set{"bar"}, nil, nil, false, true, nil},
+   "45" => { {"_route" => "bar"}, Set{"foo"}, Set{"GET", "HEAD"}, nil, false, true, nil},
+}

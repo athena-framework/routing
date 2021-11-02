@@ -30,7 +30,7 @@ class Athena::Routing::RouteCollection
     prefix = name.strip.rstrip '/'
     return if prefix.empty?
 
-    self.each_value do |route|
+    @routes.each_value do |route|
       route.path = "/#{prefix}#{route.path}"
       # TODO: Apply defaults/requirements to each route
     end

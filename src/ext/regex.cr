@@ -81,6 +81,10 @@ class Athena::Routing::FastRegex
     Athena::Routing::FastRegex::MatchData.new(str, LibPCRE2.get_ovector(@match_data), @capture_count, ((mark = LibPCRE2.get_mark(@match_data)) ? String.new(mark) : nil))
   end
 
+  def ==(other : FastRegex)
+    @source == other.@source
+  end
+
   def inspect(io : IO) : Nil
     io << '/'
     reader = Char::Reader.new(@source)

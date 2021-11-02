@@ -9,7 +9,7 @@ class Athena::Routing::RouteProvider
 
   # We store this as a tuple in order to get splatting/unpacking features.
   # defaults, variables, methods, schemas, trailing slash?, trailing var?, conditions
-  private alias RouteData = Tuple(Hash(String, String?), Set(String)?, Set(String)?, Set(String)?, Bool, Bool, Condition?)
+  alias RouteData = Tuple(Hash(String, String?), Set(String)?, Set(String)?, Set(String)?, Bool, Bool, Condition?)
 
   private record PreCompiledStaticRoute, route : ART::Route, has_trailing_slash : Bool
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String
@@ -25,8 +25,8 @@ class Athena::Routing::RouteProvider
 
     def initialize(@routes : Hash(String, RouteData)); end
 
-    def vars(subject : String) : String
-      subject.gsub(/\?P<([^>]++)>/) do |_, match|
+    def vars(subject : String, regex : Regex) : String
+      subject.gsub(regex) do |_, match|
         next "?:" if "_route" == match[1]
 
         @vars << match[1].to_s
@@ -38,11 +38,11 @@ class Athena::Routing::RouteProvider
 
   @@match_host : Bool = false
   @@static_routes : Hash(String, RouteData) = Hash(String, RouteData).new
-  @@dynamic_routes : Hash(String, RouteData) = Hash(String, RouteData).new
   @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
+  @@dynamic_routes : Hash(String, RouteData) = Hash(String, RouteData).new
   @@conditions : Hash(String, Condition)? = nil
 
-  class_getter compiled : Bool = false
+  @@compiled : Bool = false
 
   def self.compile(routes : ART::RouteCollection) : Nil
     return unless @@routes.nil?
@@ -86,6 +86,16 @@ class Athena::Routing::RouteProvider
     io << "\n\n"
   end
 
+  protected def self.reset : Nil
+    @@match_host = false
+    @@static_routes.clear
+    @@dynamic_routes.clear
+    @@route_regexes.clear
+    @@conditions = nil
+    @@compiled = false
+    @@routes = nil
+  end
+
   private def self.compile : Nil
     match_host = false
     routes = ART::RouteProvider::StaticPrefixCollection.new
@@ -94,7 +104,7 @@ class Athena::Routing::RouteProvider
       if host = route.host
         match_host = true
 
-        # TODO: Build host pattern
+        host = %(/#{host.reverse.tr "}.{", "(/)"})
       end
 
       routes.add_route (host || "/(.*)"), ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute.new name, route
@@ -177,7 +187,24 @@ class Athena::Routing::RouteProvider
       state.regex = final_regex
 
       per_host_routes.each do |host_regex, routes|
-        # TODO: Match host: 316
+        if match_host
+          if host_regex
+            host_regex.source.match(/^\^(.*)\$$/).try do |match|
+              state.vars = Set(String).new
+              host_regex = state.vars match[1], /\?P<([^>]++)>/
+              host_regex = Regex.new "(?i:#{host_regex})\\."
+              state.host_vars = state.vars
+            end
+          else
+            host_regex = /(?:(?:[^.\/]*+\.)++)/
+            state.host_vars = Set(String).new
+          end
+
+          pattern = %<#{previous_regex ? ")" : ""}|#{host_regex.source}(?>
+          state.mark += pattern.size
+          state.regex += pattern
+          previous_regex = true
+        end
 
         tree = ART::RouteProvider::StaticPrefixCollection.new
 
@@ -186,7 +213,7 @@ class Athena::Routing::RouteProvider
           matched_regex = route.compile.regex.source.match(/\^(.*)\$$/).not_nil!
 
           state.vars = Set(String).new
-          pattern = state.vars matched_regex[1]
+          pattern = state.vars matched_regex[1], /\?P<([^>]++)>/
 
           if has_trailing_slash = "/" != pattern && pattern.ends_with? '/'
             pattern = pattern.rchop '/'
@@ -207,6 +234,7 @@ class Athena::Routing::RouteProvider
       state.regex += ")/?$"
       state.mark_tail = 0
 
+      pp state.regex
       @@route_regexes[starting_mark] = ART::FastRegex.new state.regex
     end
 
