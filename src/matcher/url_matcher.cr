@@ -15,7 +15,8 @@ class Athena::Routing::Matcher::URLMatcher
 
   private def do_match(path : String, allow : Set(String), allow_schemas : Set(String)) : Hash(String, String?)?
     allow = Array(String).new
-    path = URI.decode(path).presence || "/"
+    # path = URI.decode(path).presence || "/"
+    path = path.presence || "/"
     trimmed_path = path # .rstrip('/').presence || "/"
     request_method = canonical_method = "GET"
 
@@ -25,7 +26,7 @@ class Athena::Routing::Matcher::URLMatcher
     canonical_method = "GET" if "HEAD" == request_method
     supports_redirect = false # TODO: Support this
 
-    ART::RouteProvider.static_routes[trimmed_path]?.try do |data, host, methods, schemas, has_trailing_slash, has_trailing_var, condition|
+    ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, host, methods, schemas, has_trailing_slash, has_trailing_var, condition|
       # TODO: Apply condition
 
       # TODO: Check host
@@ -43,8 +44,6 @@ class Athena::Routing::Matcher::URLMatcher
     matched_path = ART::RouteProvider.match_host ? "#{host}.#{path}" : path
 
     ART::RouteProvider.route_regexes.each do |offset, regex|
-      pp regex, matched_path
-
       regex.match(matched_path).try do |match|
         ART::RouteProvider.dynamic_routes[match.mark.not_nil!]?.try do |data, vars, methods, schemas, has_trailing_slash, has_trailing_var, condition|
           # TODO: Apply condition

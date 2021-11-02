@@ -57,7 +57,7 @@ struct RouteProviderTest < ASPEC::TestCase
     collection.add "baz5", ART::Route.new "/test/{foo}/", methods: "post"
 
     # Complex name
-    collection.add "baz.baz6", ART::Route.new "/test/{foo}", methods: "put"
+    collection.add "baz.baz6", ART::Route.new "/test/{foo}/", methods: "put"
 
     # Defaults without variable
     collection.add "foofoo", ART::Route.new "/foofoo", {"def" => "test"}

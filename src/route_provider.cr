@@ -24,10 +24,10 @@ class Athena::Routing::RouteProvider
     property host_vars : Set(String) = Set(String).new
     property mark : Int32 = 0
     property mark_tail : Int32 = 0
-    getter routes : Hash(String, DynamicRouteData)
+    getter routes : Hash(String, Array(DynamicRouteData))
     property regex : String = ""
 
-    def initialize(@routes : Hash(String, DynamicRouteData)); end
+    def initialize(@routes : Hash(String, Array(DynamicRouteData))); end
 
     def vars(subject : String, regex : Regex) : String
       subject.gsub(regex) do |_, match|
@@ -41,9 +41,9 @@ class Athena::Routing::RouteProvider
   end
 
   @@match_host : Bool = false
-  @@static_routes : Hash(String, StaticRouteData) = Hash(String, StaticRouteData).new
+  @@static_routes : Hash(String, Array(StaticRouteData)) = Hash(String, Array(StaticRouteData)).new
   @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
-  @@dynamic_routes : Hash(String, DynamicRouteData) = Hash(String, DynamicRouteData).new
+  @@dynamic_routes : Hash(String, Array(DynamicRouteData)) = Hash(String, Array(DynamicRouteData)).new
   @@conditions : Hash(String, Condition)? = nil
 
   @@compiled : Bool = false
@@ -60,13 +60,13 @@ class Athena::Routing::RouteProvider
     @@match_host
   end
 
-  def self.static_routes : Hash(String, StaticRouteData)
+  def self.static_routes : Hash(String, Array(StaticRouteData))
     self.compile unless @@compiled
 
     @@static_routes
   end
 
-  def self.dynamic_routes : Hash(String, DynamicRouteData)
+  def self.dynamic_routes : Hash(String, Array(DynamicRouteData))
     self.compile unless @@compiled
 
     @@dynamic_routes
@@ -146,7 +146,7 @@ class Athena::Routing::RouteProvider
   end
 
   private def self.compile_dynamic_routes(collection : ART::RouteCollection, match_host : Bool, chunk_limit : Int, conditions : Array(Condition)) : Nil
-    dr = Hash(String, DynamicRouteData).new
+    dr = Hash(String, Array(DynamicRouteData)).new
 
     if collection.empty?
       return @@dynamic_routes = dr
@@ -170,14 +170,14 @@ class Athena::Routing::RouteProvider
 
     collections.each do |collection|
       previous_regex = false
-      per_host_routes = Hash(Regex?, ART::RouteCollection).new
+      per_host_routes = Array(Tuple(Regex?, ART::RouteCollection)).new
       host_routes = nil
 
       collection.each do |name, route|
         regex = route.compile.host_regex
         if previous_regex != regex
           host_routes = ART::RouteCollection.new
-          per_host_routes[regex] = host_routes
+          per_host_routes << {regex, host_routes}
           previous_regex = regex
         end
 
@@ -266,7 +266,7 @@ class Athena::Routing::RouteProvider
         vars = item.variables + state.host_vars
 
         if compiled_route.regex == previous_regex
-          state.routes[state.mark.to_s] = self.compile_dynamic_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
+          state.routes[state.mark.to_s] << self.compile_dynamic_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
           next
         end
 
@@ -276,7 +276,7 @@ class Athena::Routing::RouteProvider
         state.regex += "|#{item.pattern[prefix_length..]}(*:#{state.mark})"
 
         previous_regex = compiled_route.regex
-        state.routes[state.mark.to_s] = self.compile_dynamic_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
+        state.routes[state.mark.to_s] = [self.compile_dynamic_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions] of DynamicRouteData
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeNamedRoute
         raise "BUG: StaticTreeNamedRoute"
       in ART::RouteProvider::StaticPrefixCollection::StaticTreeName
@@ -290,28 +290,29 @@ class Athena::Routing::RouteProvider
   private def self.compile_static_routes(static_routes : StaticRoutes, conditions : Array(Condition)) : Nil
     return if static_routes.empty?
 
-    sr = Hash(String, StaticRouteData).new
+    sr = Hash(String, Array(StaticRouteData)).new
 
     static_routes.each do |url, routes|
-      # TODO: Will there ever be more than 1 hash of routes?
-      name, pre_compiled_route = routes.first
+      sr[url] = Array(StaticRouteData).new routes.size
 
-      route = pre_compiled_route.route
+      routes.each do |name, pre_compiled_route|
+        route = pre_compiled_route.route
 
-      host = if route.compile.host_variables.empty?
-               route.host
-             elsif regex = route.compile.host_regex
-               regex
-             end
+        host = if route.compile.host_variables.empty?
+                 route.host
+               elsif regex = route.compile.host_regex
+                 regex
+               end
 
-      sr[url] = self.compile_static_route(
-        route,
-        name,
-        host,
-        pre_compiled_route.has_trailing_slash,
-        false,
-        conditions
-      )
+        sr[url] << self.compile_static_route(
+          route,
+          name,
+          host,
+          pre_compiled_route.has_trailing_slash,
+          false,
+          conditions
+        )
+      end
     end
 
     @@static_routes = sr

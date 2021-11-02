@@ -52,43 +52,43 @@ end
 
 collection = ART::RouteCollection.new
 
-collection.add "overridden", ART::Route.new "/overridden"
+# collection.add "overridden", ART::Route.new "/overridden"
 
 # Defaults and requirements
 collection.add "foo", ART::Route.new "/foo/{bar}", {"def" => "test"}, {"bar" => /baz|athenaa/}
 
-# Method requirement
-collection.add "bar", ART::Route.new "/bar/{foo}", methods: {"GET", "head"}
+# # Method requirement
+# collection.add "bar", ART::Route.new "/bar/{foo}", methods: {"GET", "head"}
 
-# GET also adds HEAD as valid
-collection.add "barhead", ART::Route.new "/barhead/{foo}", methods: {"GET"}
+# # GET also adds HEAD as valid
+# collection.add "barhead", ART::Route.new "/barhead/{foo}", methods: {"GET"}
 
-# Simple
-collection.add "baz", ART::Route.new "/test/baz"
+# # Simple
+# collection.add "baz", ART::Route.new "/test/baz"
 
 # Simple with extension
-collection.add "baz2", ART::Route.new "/test/baz.html"
+# collection.add "baz2", ART::Route.new "/test/baz.html"
 
 # Trailing slash
-collection.add "baz3", ART::Route.new "/test/baz3/"
+# collection.add "baz3", ART::Route.new "/test/baz3/"
 
-# Trailing slash with variable
-collection.add "baz4", ART::Route.new "/test/{foo}/"
+# # Trailing slash with variable
+# collection.add "baz4", ART::Route.new "/test/{foo}/"
 
-# Trailing slash and method
-collection.add "baz5", ART::Route.new "/test/{foo}/", methods: "post"
+# # Trailing slash and method
+# collection.add "baz5", ART::Route.new "/test/{foo}/", methods: "post"
 
-# Complex name
-collection.add "baz.baz6", ART::Route.new "/test/{foo}", methods: "put"
+# # Complex name
+# collection.add "baz.baz6", ART::Route.new "/test/{foo}/", methods: "put"
 
-# Defaults without variable
-collection.add "foofoo", ART::Route.new "/foofoo", {"def" => "test"}
+# # Defaults without variable
+# collection.add "foofoo", ART::Route.new "/foofoo", {"def" => "test"}
 
-# Pattern with quotes
-collection.add "quoter", ART::Route.new "/{quoter}", requirements: {"quoter" => /[']+/}
+# # Pattern with quotes
+# collection.add "quoter", ART::Route.new "/{quoter}", requirements: {"quoter" => /[']+/}
 
-# Space in pattern
-collection.add "space", ART::Route.new "/spa ce"
+# # Space in pattern
+# collection.add "space", ART::Route.new "/spa ce"
 
 # # Prefixes
 # collection1 = ART::RouteCollection.new
@@ -147,16 +147,16 @@ collection.add "space", ART::Route.new "/spa ce"
 # collection1.add "route6", ART::Route.new "/route6", host: nil
 # collection.add collection1
 
-# # Host and variables
-# collection1 = ART::RouteCollection.new
+# Host and variables
+collection1 = ART::RouteCollection.new
 # collection1.add "route11", ART::Route.new "/route11", host: "{var1}.example.com"
 # collection1.add "route12", ART::Route.new "/route12", {"var1" => "val"}, host: "{var1}.example.com"
-# collection1.add "route13", ART::Route.new "/route13/{name}", host: "{var1}.example.com"
+collection1.add "route13", ART::Route.new "/route13/{name}", host: "{var1}.example.com"
 # collection1.add "route14", ART::Route.new "/route14/{name}", {"var1" => "val"}, host: "{var1}.example.com"
 # collection1.add "route15", ART::Route.new "/route15/{name}", host: "c.example.com"
-# collection1.add "route16", ART::Route.new "/route16/{name}", {"var1" => "val"}, host: nil
+collection1.add "route16", ART::Route.new "/route16/{name}", {"var1" => "val"}, host: nil
 # collection1.add "route17", ART::Route.new "/route17", host: nil
-# collection.add collection1
+collection.add collection1
 
 # # Multiple sub-collections with a single route and prefix each
 # collection1 = ART::RouteCollection.new
