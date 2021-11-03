@@ -5,15 +5,15 @@ require "./static_prefix_collection"
 # Exposes getters to static/dynamic routes as well as the full route regex.
 # Values are cached on the class level for performance resaons.
 class Athena::Routing::RouteProvider
-  private alias Condition = Proc(HTTP::Request, Bool)
+  private alias Condition = Athena::Routing::Route::Condition
 
   # We store this as a tuple in order to get splatting/unpacking features.
   # defaults, variables, methods, schemas, trailing slash?, trailing var?, conditions
-  alias DynamicRouteData = Tuple(Hash(String, String?), Set(String)?, Set(String)?, Set(String)?, Bool, Bool, Condition?)
+  alias DynamicRouteData = Tuple(Hash(String, String?), Set(String)?, Set(String)?, Set(String)?, Bool, Bool, Int32?)
 
   # We store this as a tuple in order to get splatting/unpacking features.
   # defaults, host, methods, schemas, trailing slash?, trailing var?, conditions
-  alias StaticRouteData = Tuple(Hash(String, String?), String | Regex | Nil, Set(String)?, Set(String)?, Bool, Bool, Condition?)
+  alias StaticRouteData = Tuple(Hash(String, String?), String | Regex | Nil, Set(String)?, Set(String)?, Bool, Bool, Int32?)
 
   private record PreCompiledStaticRoute, route : ART::Route, has_trailing_slash : Bool
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String
@@ -44,7 +44,7 @@ class Athena::Routing::RouteProvider
   @@static_routes : Hash(String, Array(StaticRouteData)) = Hash(String, Array(StaticRouteData)).new
   @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
   @@dynamic_routes : Hash(String, Array(DynamicRouteData)) = Hash(String, Array(DynamicRouteData)).new
-  @@conditions : Hash(String, Condition)? = nil
+  @@conditions : Hash(Int32, Condition) = Hash(Int32, Condition).new
 
   @@compiled : Bool = false
 
@@ -78,6 +78,12 @@ class Athena::Routing::RouteProvider
     @@route_regexes
   end
 
+  def self.conditions : Hash(Int32, Condition)
+    self.compile unless @@compiled
+
+    @@conditions
+  end
+
   def self.inspect(io : IO) : Nil
     io << "Match Host:  "
     self.match_host.inspect io
@@ -87,6 +93,8 @@ class Athena::Routing::RouteProvider
     self.route_regexes.inspect io
     io << "\n\nDynamic Routes:  "
     self.dynamic_routes.inspect io
+    io << "\n\nConditions:  "
+    self.conditions.inspect io
     io << "\n\n"
   end
 
@@ -95,7 +103,7 @@ class Athena::Routing::RouteProvider
     @@static_routes.clear
     @@dynamic_routes.clear
     @@route_regexes.clear
-    @@conditions = nil
+    @@conditions.clear
     @@compiled = false
     @@routes = nil
   end
@@ -326,8 +334,9 @@ class Athena::Routing::RouteProvider
       defaults.delete "_canonical_route"
     end
 
-    # TODO: Handle setting these?
-    condition = nil
+    if condition = route.condition
+      @@conditions[condition_key = 1 * @@conditions.size] = condition
+    end
 
     {
       Hash(String, String?){"_route" => name}.merge!(defaults),
@@ -336,7 +345,7 @@ class Athena::Routing::RouteProvider
       route.schemas,
       has_trailing_slash,
       has_trailing_var,
-      condition,
+      condition_key,
     }
   end
 
@@ -348,8 +357,9 @@ class Athena::Routing::RouteProvider
       defaults.delete "_canonical_route"
     end
 
-    # TODO: Handle setting these?
-    condition = nil
+    if condition = route.condition
+      @@conditions[condition_key = 1 * @@conditions.size] = condition
+    end
 
     {
       Hash(String, String?){"_route" => name}.merge!(defaults),
@@ -358,7 +368,7 @@ class Athena::Routing::RouteProvider
       route.schemas,
       has_trailing_slash,
       has_trailing_var,
-      condition,
+      condition_key,
     }
   end
 

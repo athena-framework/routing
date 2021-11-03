@@ -1,16 +1,21 @@
 # TODO: How to store a reference to the "Controller"
 # in quotes because it technically doesn't need to be an ART::Controller.
 class Athena::Routing::Route
+  {% if @top_level.has_constant? "Athena::Framework::Request" %}
+    alias Condition = Proc(Athena::Framework::Request, Bool)
+  {% else %}
+    alias Condition = Proc(HTTP::Request, Bool)
+  {% end %}
+
   getter path : String
   getter defaults : Hash(String, String?) = Hash(String, String?).new
   getter requirements : Hash(String, Regex) = Hash(String, Regex).new
   getter host : String?
   getter methods : Set(String)?
-  getter schemas : Set(String)? = nil
+  property condition : Condition? = nil
 
   # TODO: Don't think we actually know what this is:
-  # getter condition_key : String? = nil
-  # getter condition : Proc(HTTP::Request, Bool)? = nil
+  getter schemas : Set(String)? = nil
 
   @compiled_route : ART::CompiledRoute? = nil
 
@@ -30,6 +35,12 @@ class Athena::Routing::Route
   end
 
   def_equals @path, @defaults, @requirements, @host, @methods, @schemas
+
+  {% begin %}
+    def condition(&block : {{@top_level.has_constant?("Athena::Framework::Request") ? "Athena::Framework::Request".id : "HTTP::Request".id}} -> Bool) : Nil
+      @condition = block
+    end
+  {% end %}
 
   def host=(pattern : String | Regex) : self
     @host = self.extract_inline_defaults_and_requirements pattern

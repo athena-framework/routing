@@ -18,6 +18,8 @@ true
   "/route11"       => [{ {"_route" => "route11"}, /^(?P<var1>[^\.]++)\.example\.com$/i, nil, nil, false, false, nil }],
   "/route12"       => [{ {"_route" => "route12", "var1" => "val"}, /^(?P<var1>[^\.]++)\.example\.com$/i, nil, nil, false, false, nil }],
   "/route17"       => [{ {"_route" => "route17"}, nil, nil, nil, false, false, nil }],
+  "/secure"        => [{ {"_route" => "secure"}, nil, nil, Set{"https"}, false, false, nil }],
+  "/nonsecure"     => [{ {"_route" => "nonsecure"}, nil, nil, Set{"http"}, false, false, nil }],
 }
 ####
 {

@@ -4,6 +4,8 @@ struct RouteProviderTest < ASPEC::TestCase
   private COLLECTIONS = [
     ART::RouteCollection.new,
     self.default_collection,
+    self.redirection_collection,
+    self.root_prefix_collection,
   ]
 
   def tear_down : Nil
@@ -11,7 +13,7 @@ struct RouteProviderTest < ASPEC::TestCase
   end
 
   {% begin %}
-    {% for test_case in 0..1 %}
+    {% for test_case in 0..3 %}
       def test_compile_{{test_case}} : Nil
         \{% begin %}
           ART::RouteProvider.compile COLLECTIONS[{{test_case}}]
@@ -22,6 +24,7 @@ struct RouteProviderTest < ASPEC::TestCase
           ART::RouteProvider.static_routes.should eq (\{{data[1].id}})
           ART::RouteProvider.route_regexes.should eq (\{{data[2].id}})
           ART::RouteProvider.dynamic_routes.should eq (\{{data[3].id}})
+          ART::RouteProvider.conditions.size.should eq (\{{data[4].id}})
         \{% end %}
       end
     {% end %}
@@ -149,6 +152,32 @@ struct RouteProviderTest < ASPEC::TestCase
     collection1.add collection2
     collection1.add_prefix "/a"
     collection.add collection1
+
+    collection
+  end
+
+  def self.redirection_collection : ART::RouteCollection
+    collection = self.default_collection.dup
+
+    collection.add "secure", ART::Route.new "/secure", schemas: "https"
+    collection.add "nonsecure", ART::Route.new "/nonsecure", schemas: "http"
+
+    collection
+  end
+
+  def self.root_prefix_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "static", ART::Route.new "/test"
+    collection.add "dynamic", ART::Route.new "/{var}"
+    collection.add_prefix "rootprefix"
+
+    route = ART::Route.new "/with-condition"
+    route.condition do |request|
+      "GET" == request.method
+    end
+
+    collection.add "with-condition", route
 
     collection
   end
