@@ -6,6 +6,10 @@ struct RouteProviderTest < ASPEC::TestCase
     self.default_collection,
     self.redirection_collection,
     self.root_prefix_collection,
+    self.head_match_case_collection,
+    self.group_optmized_collection,
+    self.trailing_slash_collection,
+    self.trailing_slash_collection,
   ]
 
   def tear_down : Nil
@@ -13,7 +17,7 @@ struct RouteProviderTest < ASPEC::TestCase
   end
 
   {% begin %}
-    {% for test_case in 0..3 %}
+    {% for test_case in 0..7 %}
       def test_compile_{{test_case}} : Nil
         \{% begin %}
           ART::RouteProvider.compile COLLECTIONS[{{test_case}}]
@@ -178,6 +182,66 @@ struct RouteProviderTest < ASPEC::TestCase
     end
 
     collection.add "with-condition", route
+
+    collection
+  end
+
+  def self.head_match_case_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "just_head", ART::Route.new "/just_head", methods: "HEAD"
+    collection.add "head_and_get", ART::Route.new "/head_and_get", methods: {"HEAD", "GET"}
+    collection.add "get_and_head", ART::Route.new "/get_and_head", methods: {"GET", "HEAD"}
+    collection.add "post_and_head", ART::Route.new "/post_and_head", methods: {"POST", "HEAD"}
+    collection.add "put_and_post", ART::Route.new "/put_and_post", methods: {"PUT", "POST"}
+    collection.add "put_and_get_and_head", ART::Route.new "/put_and_post", methods: {"PUT", "GET", "HEAD"}
+
+    collection
+  end
+
+  def self.group_optmized_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "a_first", ART::Route.new "/a/11"
+    collection.add "a_second", ART::Route.new "/a/22"
+    collection.add "a_third", ART::Route.new "/a/33"
+    collection.add "a_wildcard", ART::Route.new "/{param}"
+    collection.add "a_fourth", ART::Route.new "/a/44/"
+    collection.add "a_fifth", ART::Route.new "/a/55/"
+    collection.add "a_sixth", ART::Route.new "/a/66/"
+    collection.add "nested_wildcard", ART::Route.new "/nested/{param}"
+
+    collection.add "nested_a", ART::Route.new "/nested/group/a/"
+    collection.add "nested_b", ART::Route.new "/nested/group/b/"
+    collection.add "nested_c", ART::Route.new "/nested/group/c/"
+
+    collection.add "slashed_a", ART::Route.new "/slashed/group/"
+    collection.add "slashed_b", ART::Route.new "/slashed/group/b/"
+    collection.add "slashed_c", ART::Route.new "/slashed/group/c/"
+
+    collection
+  end
+
+  def self.trailing_slash_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "simple_trailing_slash_no_methods", ART::Route.new "/trailing/simple/no-methods/"
+    collection.add "simple_trailing_slash_GET_method", ART::Route.new "/trailing/simple/get-method/", methods: "GET"
+    collection.add "simple_trailing_slash_HEAD_method", ART::Route.new "/trailing/simple/head-method/", methods: "HEAD"
+    collection.add "simple_trailing_slash_POST_method", ART::Route.new "/trailing/simple/post-method/", methods: "POST"
+    collection.add "regex_trailing_slash_no_methods", ART::Route.new "/trailing/regex/no-methods/{param}/"
+    collection.add "regex_trailing_slash_GET_method", ART::Route.new "/trailing/regex/get-method/{param}/", methods: "GET"
+    collection.add "regex_trailing_slash_HEAD_method", ART::Route.new "/trailing/regex/head-method/{param}/", methods: "HEAD"
+    collection.add "regex_trailing_slash_POST_method", ART::Route.new "/trailing/regex/post-method/{param}/", methods: "POST"
+
+    collection.add "simple_not_trailing_slash_no_methods", ART::Route.new "/not-trailing/simple/no-methods"
+    collection.add "simple_not_trailing_slash_GET_method", ART::Route.new "/not-trailing/simple/get-method", methods: "GET"
+    collection.add "simple_not_trailing_slash_HEAD_method", ART::Route.new "/not-trailing/simple/head-method", methods: "HEAD"
+    collection.add "simple_not_trailing_slash_POST_method", ART::Route.new "/not-trailing/simple/post-method", methods: "POST"
+    collection.add "regex_not_trailing_slash_no_methods", ART::Route.new "/not-trailing/regex/no-methods/{param}"
+    collection.add "regex_not_trailing_slash_GET_method", ART::Route.new "/not-trailing/regex/get-method/{param}", methods: "GET"
+    collection.add "regex_not_trailing_slash_HEAD_method", ART::Route.new "/not-trailing/regex/head-method/{param}", methods: "HEAD"
+    collection.add "regex_not_trailing_slash_POST_method", ART::Route.new "/not-trailing/regex/post-method/{param}", methods: "POST"
 
     collection
   end
