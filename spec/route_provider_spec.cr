@@ -1,4 +1,5 @@
 require "./spec_helper"
+require "digest/md5"
 
 struct RouteProviderTest < ASPEC::TestCase
   private COLLECTIONS = [
@@ -10,6 +11,8 @@ struct RouteProviderTest < ASPEC::TestCase
     self.group_optmized_collection,
     self.trailing_slash_collection,
     self.trailing_slash_collection,
+    self.host_tree_collection,
+    self.chunked_collection,
   ]
 
   def tear_down : Nil
@@ -17,7 +20,7 @@ struct RouteProviderTest < ASPEC::TestCase
   end
 
   {% begin %}
-    {% for test_case in 0..7 %}
+    {% for test_case in 0..9 %}
       def test_compile_{{test_case}} : Nil
         \{% begin %}
           ART::RouteProvider.compile COLLECTIONS[{{test_case}}]
@@ -242,6 +245,27 @@ struct RouteProviderTest < ASPEC::TestCase
     collection.add "regex_not_trailing_slash_GET_method", ART::Route.new "/not-trailing/regex/get-method/{param}", methods: "GET"
     collection.add "regex_not_trailing_slash_HEAD_method", ART::Route.new "/not-trailing/regex/head-method/{param}", methods: "HEAD"
     collection.add "regex_not_trailing_slash_POST_method", ART::Route.new "/not-trailing/regex/post-method/{param}", methods: "POST"
+
+    collection
+  end
+
+  def self.host_tree_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "a", ART::Route.new "/", host: "{d}.e.c.b.a"
+    collection.add "b", ART::Route.new "/", host: "d.c.b.a"
+    collection.add "c", ART::Route.new "/", host: "{e}.e.c.b.a"
+
+    collection
+  end
+
+  def self.chunked_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    1000.times do |idx|
+      hash = Digest::MD5.hexdigest(idx.to_s)[0...6]
+      collection.add "_#{idx}", ART::Route.new "/#{hash}/{a}/{b}/{c}/#{hash}"
+    end
 
     collection
   end
