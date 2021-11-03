@@ -26,13 +26,30 @@ class Athena::Routing::RouteCollection
     @priorities[name] = priority unless priority.zero?
   end
 
-  def add_prefix(name : String, defaults : Hash(String, String)? = nil, requirements : Hash(String, Regex)? = nil) : Nil
+  def add_defaults(defaults : Hash(String, String?)) : Nil
+    return if defaults.empty?
+
+    @routes.each_value do |route|
+      route.add_defaults defaults
+    end
+  end
+
+  def add_prefix(name : String, defaults : Hash(String, String?) = Hash(String, String?).new, requirements : Hash(String, String | Regex) = Hash(String, String | Regex).new) : Nil
     prefix = name.strip.rstrip '/'
     return if prefix.empty?
 
     @routes.each_value do |route|
       route.path = "/#{prefix}#{route.path}"
-      # TODO: Apply defaults/requirements to each route
+      route.add_defaults defaults
+      route.add_requirements requirements
+    end
+  end
+
+  def add_requirements(requirements : Hash(String, Regex | String)) : Nil
+    return if requirements.empty?
+
+    @routes.each_value do |route|
+      route.add_requirements requirements
     end
   end
 

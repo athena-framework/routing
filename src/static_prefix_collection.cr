@@ -94,43 +94,46 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
     static_length = nil
 
     idx = base_length
+    begin
+      while idx < end_size && prefix[idx] == other_prefix[idx]
+        if '(' == prefix[idx]
+          static_length = static_length || idx
+          jdx = 1 + idx
+          n = 1
 
-    while idx < end_size && prefix[idx] == other_prefix[idx]
-      if '(' == prefix[idx]
-        static_length = static_length || idx
-        jdx = 1 + idx
-        n = 1
+          should_break = while jdx < end_size && 0 < n
+            break true if prefix[jdx] != other_prefix[jdx]
 
-        should_break = while jdx < end_size && 0 < n
-          break true if prefix[jdx] != other_prefix[jdx]
+            if '(' == prefix[jdx]
+              n += 1
+            elsif ')' == prefix[jdx]
+              n -= 1
+            elsif '\\' == prefix[jdx] && ((jdx += 1) == end_size || prefix[jdx] != other_prefix[jdx])
+              jdx -= 1
+              break false
+            end
 
-          if '(' == prefix[jdx]
-            n += 1
-          elsif ')' == prefix[jdx]
-            n -= 1
-          elsif '\\' == prefix[jdx] && ((jdx += 1) == end_size || prefix[jdx] != other_prefix[jdx])
-            jdx -= 1
-            break false
+            jdx += 1
           end
 
-          jdx += 1
+          break if should_break
+          break if 0 < n
+          break if ('?' == (prefix[jdx]? || "") || '?' == (other_prefix[jdx]? || "")) && ((prefix[jdx]? || "") != (other_prefix[jdx]? || ""))
+
+          sub_pattern = prefix[idx, jdx - idx]
+
+          break if prefix != other_prefix && !sub_pattern.matches?(/^\(\[[^\]]++\]\+\+\)$/) && !"".matches?(/(?<!#{sub_pattern})/)
+
+          idx = jdx - 1
+        elsif '\\' == prefix[idx] && ((idx += 1) == end_size || prefix[idx] != other_prefix[idx])
+          idx -= 1
+          break
         end
 
-        break if should_break
-        break if 0 < n
-        break if ('?' == (prefix[jdx]? || "") || '?' == (other_prefix[jdx]? || "")) && ((prefix[jdx]? || "") != (other_prefix[jdx]? || ""))
-
-        sub_pattern = prefix[idx, jdx - idx]
-
-        break if prefix != other_prefix && !sub_pattern.matches?(/^\(\[[^\]]++\]\+\+\)$/) && !"".matches?(/(?<!#{sub_pattern})/)
-
-        idx = jdx - 1
-      elsif '\\' == prefix[idx] && ((idx += 1) == end_size || prefix[idx] != other_prefix[idx])
-        idx -= 1
-        break
+        idx += 1
       end
-
-      idx += 1
+    rescue e : ArgumentError
+      raise e unless e.message.try &.starts_with? "lookbehind assertion is not fixed length"
     end
 
     {prefix[0, idx], prefix[0, static_length || idx]}

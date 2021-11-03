@@ -13,6 +13,9 @@ struct RouteProviderTest < ASPEC::TestCase
     self.trailing_slash_collection,
     self.host_tree_collection,
     self.chunked_collection,
+    self.demo_collection,
+    self.suffix_collection,
+    self.host_collection,
   ]
 
   def tear_down : Nil
@@ -20,7 +23,7 @@ struct RouteProviderTest < ASPEC::TestCase
   end
 
   {% begin %}
-    {% for test_case in 0..9 %}
+    {% for test_case in 0..12 %}
       def test_compile_{{test_case}} : Nil
         \{% begin %}
           ART::RouteProvider.compile COLLECTIONS[{{test_case}}]
@@ -266,6 +269,55 @@ struct RouteProviderTest < ASPEC::TestCase
       hash = Digest::MD5.hexdigest(idx.to_s)[0...6]
       collection.add "_#{idx}", ART::Route.new "/#{hash}/{a}/{b}/{c}/#{hash}"
     end
+
+    collection
+  end
+
+  def self.demo_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "a", ART::Route.new "/admin/post/"
+    collection.add "b", ART::Route.new "/admin/post/new"
+    collection.add "c", ART::Route.new "/admin/post/{id}", requirements: {"id" => /\d+/}
+    collection.add "d", ART::Route.new "/admin/post/{id}/edit", requirements: {"id" => /\d+/}
+    collection.add "e", ART::Route.new "/admin/post/{id}/delete", requirements: {"id" => /\d+/}
+
+    collection.add "f", ART::Route.new "/blog/"
+    collection.add "g", ART::Route.new "/blog/rss.xml"
+    collection.add "h", ART::Route.new "/blog/page/{page}", requirements: {"id" => /\d+/}
+    collection.add "i", ART::Route.new "/blog/posts/{page}", requirements: {"id" => /\d+/}
+    collection.add "j", ART::Route.new "/blog/comments/{id}/new", requirements: {"id" => /\d+/}
+
+    collection.add "k", ART::Route.new "/blog/search"
+    collection.add "l", ART::Route.new "/login"
+    collection.add "m", ART::Route.new "/logout"
+    collection.add_prefix "/{_locale}"
+    collection.add "n", ART::Route.new "/{_locale}"
+    collection.add_requirements({"_locale" => /en|fr/})
+    collection.add_defaults({"_locale" => "en"})
+
+    collection
+  end
+
+  def self.suffix_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "r1", ART::Route.new "abc{foo}/1"
+    collection.add "r2", ART::Route.new "abc{foo}/2"
+
+    collection.add "r10", ART::Route.new "abc{foo}/10"
+    collection.add "r20", ART::Route.new "abc{foo}/20"
+    collection.add "r100", ART::Route.new "abc{foo}/100"
+    collection.add "r200", ART::Route.new "abc{foo}/200"
+
+    collection
+  end
+
+  def self.host_collection : ART::RouteCollection
+    collection = ART::RouteCollection.new
+
+    collection.add "r1", ART::Route.new "abc{foo}", host: "{foo}.example.com"
+    collection.add "r2", ART::Route.new "abc{foo}", host: "{foo}.example.com"
 
     collection
   end
