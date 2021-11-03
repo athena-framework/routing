@@ -11,12 +11,12 @@ struct RouteProviderTest < ASPEC::TestCase
   end
 
   {% begin %}
-    {% for test_case in 1..1 %}
+    {% for test_case in 0..1 %}
       def test_compile_{{test_case}} : Nil
         \{% begin %}
           ART::RouteProvider.compile COLLECTIONS[{{test_case}}]
 
-          \{% data = read_file("#{__DIR__}/fixtures/route_provider/route_collection{{test_case}}.txt").split("\n\n\n\n") %}
+          \{% data = read_file("#{__DIR__}/fixtures/route_provider/route_collection{{test_case}}.cr").split("####") %}
 
           ART::RouteProvider.match_host.should eq (\{{data[0].id}})
           ART::RouteProvider.static_routes.should eq (\{{data[1].id}})
