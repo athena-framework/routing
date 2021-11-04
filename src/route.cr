@@ -1,11 +1,7 @@
 # TODO: How to store a reference to the "Controller"
 # in quotes because it technically doesn't need to be an ART::Controller.
 class Athena::Routing::Route
-  {% if @top_level.has_constant? "Athena::Framework::Request" %}
-    alias Condition = Proc(Athena::Framework::Request, Bool)
-  {% else %}
-    alias Condition = Proc(HTTP::Request, Bool)
-  {% end %}
+  alias Condition = Proc(Athena::Routing::Request, Bool)
 
   getter path : String
   getter defaults : Hash(String, String?) = Hash(String, String?).new
