@@ -35,7 +35,6 @@ class Athena::Routing::Matcher::URLMatcher
     trimmed_path = path.rstrip('/').presence || "/"
     request_method = canonical_method = @request.try &.method || "GET"
 
-    # TODO: Match host
     host = @request.try &.hostname || "localhost"
 
     canonical_method = "GET" if "HEAD" == request_method
@@ -89,20 +88,22 @@ class Athena::Routing::Matcher::URLMatcher
 
     ART::RouteProvider.route_regexes.each do |offset, regex|
       regex.match(matched_path).try do |match|
-        ART::RouteProvider.dynamic_routes[match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
+        ART::RouteProvider.dynamic_routes[matched_mark = match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
           if condition && (request = @request) && !(ART::RouteProvider.conditions[condition].call(request))
             next
           end
 
           has_trailing_var = trimmed_path != path && has_trailing_var
 
-          # if has_trailing_var && match && vars && (has_trailing_slash || !(n = match[vars.size]?) || '/' != (n.to_s[-1]? || '/'))
-          #   if has_trailing_slash
-          #     match = n
-          #   else
-          #     has_trailing_var = false
-          #   end
-          # end
+          has_n = has_trailing_slash || false # FIXME: When some test fails because of it :S
+
+          if has_trailing_var && has_n && (sub_match = regex.match(ART::RouteProvider.match_host ? "#{host}.#{trimmed_path}" : trimmed_path)) && (matched_mark == sub_match.mark.not_nil!)
+            if has_trailing_slash
+              match = sub_match
+            else
+              has_trailing_var = false
+            end
+          end
 
           if "/" != path && !has_trailing_var && has_trailing_slash == (trimmed_path == path)
             # TODO: Support redirections

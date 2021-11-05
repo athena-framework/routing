@@ -31,7 +31,7 @@ end
 collection = ART::RouteCollection.new
 collection = ART::RouteCollection.new
 
-collection.add "a", ART::Route.new "/admin/post/", methods: "POST"
+collection.add "a", ART::Route.new "/admin/post/{id}/" # , methods: "POST"
 # collection.add "b", ART::Route.new "/admin/post/new"
 # collection.add "c", ART::Route.new "/admin/post/{id}", requirements: {"id" => /\d+/}
 # collection.add "d", ART::Route.new "/admin/post/{id}/edit", requirements: {"id" => /\d+/}
@@ -53,6 +53,6 @@ ART.compile collection
 
 matcher = ART::Matcher::URLMatcher.new
 
-request = HTTP::Request.new "POST", "/admin/post/"
+request = HTTP::Request.new "GET", "/admin/post/10/"
 
 pp matcher.match request
