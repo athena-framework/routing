@@ -4,7 +4,11 @@ class Athena::Routing::Matcher::URLMatcher
   include Athena::Routing::Matcher::RequestMatcherInterface
   include Athena::Routing::Matcher::URLMatcherInterface
 
+  property context : ART::RequestContext
+
   @request : ART::Request? = nil
+
+  def initialize(@context : ART::RequestContext); end
 
   def match(@request : ART::Request) : Hash(String, String?)
     self.match @request.not_nil!.path
@@ -33,9 +37,9 @@ class Athena::Routing::Matcher::URLMatcher
     path = URI.decode(path).presence || "/"
     path = path.presence || "/"
     trimmed_path = path.rstrip('/').presence || "/"
-    request_method = canonical_method = @request.try &.method || "GET"
+    request_method = canonical_method = @context.method
 
-    host = @request.try &.hostname || "localhost"
+    host = @context.host.downcase if ART::RouteProvider.match_host
 
     canonical_method = "GET" if "HEAD" == request_method
     supports_redirect = false # TODO: Support this
@@ -68,7 +72,7 @@ class Athena::Routing::Matcher::URLMatcher
       end
 
       # TODO: Check schemas
-      has_required_scheme = required_schemas.nil? || false # TODO: Requests do not expose the scheme
+      has_required_scheme = required_schemas.nil? || required_schemas.includes? @context.schema
       if has_required_scheme && required_methods && !required_methods.includes?(canonical_method) && !required_methods.includes?(request_method)
         allow.concat required_methods
         next
@@ -116,7 +120,7 @@ class Athena::Routing::Matcher::URLMatcher
             end
           end
 
-          if required_schemas && false # TODO: Requests do not expose the scheme
+          if required_schemas && required_schemas.includes? @context.schema
             allow_schemas.concat required_schemas
             next
           end
