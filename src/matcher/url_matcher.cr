@@ -72,7 +72,7 @@ class Athena::Routing::Matcher::URLMatcher
       end
 
       # TODO: Check schemas
-      has_required_scheme = required_schemas.nil? || required_schemas.includes? @context.schema
+      has_required_scheme = required_schemas.nil? || required_schemas.includes? @context.scheme
       if has_required_scheme && required_methods && !required_methods.includes?(canonical_method) && !required_methods.includes?(request_method)
         allow.concat required_methods
         next
@@ -93,6 +93,9 @@ class Athena::Routing::Matcher::URLMatcher
     ART::RouteProvider.route_regexes.each do |offset, regex|
       regex.match(matched_path).try do |match|
         ART::RouteProvider.dynamic_routes[matched_mark = match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
+          # Dup the data hash so we don't mutate the original.
+          data = data.dup
+
           if condition && (request = @request) && !(ART::RouteProvider.conditions[condition].call(request))
             next
           end
@@ -115,12 +118,12 @@ class Athena::Routing::Matcher::URLMatcher
           end
 
           vars.try &.each_with_index do |var, idx|
-            if m = match[idx + 1]
+            if m = match[idx + 1]?
               data[var] = m
             end
           end
 
-          if required_schemas && required_schemas.includes? @context.schema
+          if required_schemas && required_schemas.includes? @context.scheme
             allow_schemas.concat required_schemas
             next
           end

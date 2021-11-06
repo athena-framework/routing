@@ -3,6 +3,7 @@ require "./ext/*"
 require "http/request"
 
 require "./compiled_route"
+require "./request_context"
 require "./route"
 require "./route_collection"
 require "./route_compiler"

@@ -1,6 +1,7 @@
 class Athena::Routing::RequestContext
   # Represents the path of the URL _before_ `#path`.
   getter base_url : String
+  getter method : String
   getter path : String
   getter host : String
   getter scheme : String

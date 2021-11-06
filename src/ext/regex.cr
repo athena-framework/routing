@@ -19,10 +19,11 @@ class Athena::Routing::FastRegex
     def []?(n : Int) : String?
       return unless valid_group?(n)
 
-      n += size if n < 0
       start = @ovector[n * 2]
       finish = @ovector[n * 2 + 1]
-      return if start < 0
+
+      # TODO: Figure out what this should actually be.
+      return if start > Int32::MAX || finish > Int32::MAX
       @string.byte_slice(start, finish - start)
     end
 
@@ -55,7 +56,8 @@ class Athena::Routing::FastRegex
   @mark : UInt8* = Pointer(UInt8).null
 
   def initialize(@source : String)
-    unless @code = LibPCRE2.compile @source, @source.bytesize, 0, out error_code, out error_offset, nil
+    # Automatically apply `DOTALL` and `DOLLAR_ENDONLY` options.
+    unless @code = LibPCRE2.compile @source, @source.bytesize, 0x00000010 | 0x00000020, out error_code, out error_offset, nil
       bytes = Bytes.new 128
       err = LibPCRE2.get_error_message(error_code, bytes, bytes.size)
       raise ArgumentError.new "#{String.new(bytes)} at #{error_offset}"
@@ -77,7 +79,7 @@ class Athena::Routing::FastRegex
 
   def match_at_byte_index(str, byte_index = 0) : MatchData?
     return if byte_index > str.bytesize
-    internal_matches(str, byte_index)
+    return unless internal_matches(str, byte_index)
     Athena::Routing::FastRegex::MatchData.new(str, LibPCRE2.get_ovector(@match_data), @capture_count, ((mark = LibPCRE2.get_mark(@match_data)) ? String.new(mark) : nil))
   end
 
@@ -103,11 +105,14 @@ class Athena::Routing::FastRegex
     io << '/'
   end
 
-  private def internal_matches(str, byte_index)
+  private def internal_matches(str, byte_index) : Bool
     unless (match = LibPCRE2.jit_match @code, str, str.bytesize, byte_index, 0, @match_data, nil) > 0
+      return false if match == -1
       bytes = Bytes.new 128
       err = LibPCRE2.get_error_message(match, bytes, bytes.size)
       raise ArgumentError.new String.new bytes
     end
+
+    true
   end
 end
