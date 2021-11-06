@@ -107,7 +107,7 @@ class Athena::Routing::FastRegex
 
   private def internal_matches(str, byte_index) : Bool
     unless (match = LibPCRE2.jit_match @code, str, str.bytesize, byte_index, 0, @match_data, nil) > 0
-      return false if match == -1
+      return false if match == LibPCRE2::ERROR_NOMATCH
       bytes = Bytes.new 128
       err = LibPCRE2.get_error_message(match, bytes, bytes.size)
       raise ArgumentError.new String.new bytes
