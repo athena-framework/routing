@@ -39,7 +39,7 @@ collection.add "e", ART::Route.new "/admin/post/{id}/delete", requirements: {"id
 
 collection.add "f", ART::Route.new "/blog/"
 collection.add "g", ART::Route.new "/blog/rss.xml"
-collection.add "h", ART::Route.new "/blog/page/{page}", requirements: {"id" => /\d+/}
+collection.add "h", ART::Route.new "/blog/page/{page}", requirements: {"page" => /\d+/}
 collection.add "i", ART::Route.new "/blog/posts/{page}", requirements: {"page" => /\d+/}
 collection.add "j", ART::Route.new "/blog/comments/{id}/new", requirements: {"id" => /\d+/}
 
