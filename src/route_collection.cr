@@ -53,6 +53,14 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  def set_host(host : String, defaults : Hash(String, String?) = Hash(String, String?).new, requirements : Hash(String, String | Regex) = Hash(String, String | Regex).new) : Nil
+    @routes.each_value do |route|
+      route.host = host
+      route.add_defaults defaults
+      route.add_requirements requirements
+    end
+  end
+
   # TODO: Add methods to allow adding values to all routes
   # such as requirements, defaults, host, etc.
 

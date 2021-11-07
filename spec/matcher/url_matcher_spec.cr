@@ -460,6 +460,106 @@ struct URLMatcherTest < ASPEC::TestCase
     self.get_matcher(routes).match("/new").should eq({"_route" => "bar"})
   end
 
+  def test_with_host : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{foo}", host: "{locale}.example.com"
+    end
+
+    self.get_matcher(routes, ART::RequestContext.new host: "de.example.com").match("/foo/bar").should eq({"_route" => "foo", "foo" => "bar", "locale" => "de"})
+  end
+
+  def test_with_host_on_collection : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{foo}"
+      add "bar", ART::Route.new "/bar/{foo}", host: "{locale}.example.com"
+      set_host "{locale}.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "en.example.com"
+    matcher.match("/foo/bar").should eq({"_route" => "foo", "foo" => "bar", "locale" => "en"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "en.example.com"
+    matcher.match("/bar/bar").should eq({"_route" => "bar", "foo" => "bar", "locale" => "en"})
+  end
+
+  def test_variation_in_trailing_slash_with_host : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/", host: "foo.example.com"
+      add "bar", ART::Route.new "/foo", host: "bar.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "foo.example.com"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "bar.example.com"
+    matcher.match("/foo").should eq({"_route" => "bar"})
+  end
+
+  def test_variation_in_trailing_slash_with_host_reversed : Nil
+    routes = self.build_collection do
+      add "bar", ART::Route.new "/foo", host: "bar.example.com"
+      add "foo", ART::Route.new "/foo/", host: "foo.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "foo.example.com"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "bar.example.com"
+    matcher.match("/foo").should eq({"_route" => "bar"})
+  end
+
+  def test_variation_in_trailing_slash_with_host_and_variable : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/{foo}/", host: "foo.example.com"
+      add "bar", ART::Route.new "/{foo}", host: "bar.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "foo.example.com"
+    matcher.match("/bar/").should eq({"_route" => "foo", "foo" => "bar"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "bar.example.com"
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
+  def test_variation_in_trailing_slash_with_host_and_variable_reversed : Nil
+    routes = self.build_collection do
+      add "bar", ART::Route.new "/{foo}", host: "bar.example.com"
+      add "foo", ART::Route.new "/{foo}/", host: "foo.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "foo.example.com"
+    matcher.match("/bar/").should eq({"_route" => "foo", "foo" => "bar"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "bar.example.com"
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
+  def test_variation_in_trailing_slash_with_host_and_method : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/", methods: "POST"
+      add "bar", ART::Route.new "/foo", methods: "GET"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "POST"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "GET"
+    matcher.match("/foo").should eq({"_route" => "bar"})
+  end
+
+  def test_variation_in_trailing_slash_with_host_and_method_reversed : Nil
+    routes = self.build_collection do
+      add "bar", ART::Route.new "/foo", methods: "GET"
+      add "foo", ART::Route.new "/foo/", methods: "POST"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "POST"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "GET"
+    matcher.match("/foo").should eq({"_route" => "bar"})
+  end
+
   private def build_collection(&) : ART::RouteCollection
     routes = ART::RouteCollection.new
 

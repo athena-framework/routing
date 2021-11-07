@@ -271,7 +271,7 @@ class Athena::Routing::RouteProvider
         next
       in ART::RouteProvider::StaticPrefixCollection::StaticPrefixTreeRoute
         compiled_route = item.route.compile
-        vars = item.variables + state.host_vars
+        vars = state.host_vars + item.variables
 
         if compiled_route.regex == previous_regex
           state.routes[state.mark.to_s] << self.compile_dynamic_route item.route, item.name, vars, item.has_trailing_slash, item.has_trailing_var, conditions
