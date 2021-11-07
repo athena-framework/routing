@@ -169,8 +169,8 @@ struct RouteProviderTest < ASPEC::TestCase
   def self.redirection_collection : ART::RouteCollection
     collection = self.default_collection.dup
 
-    collection.add "secure", ART::Route.new "/secure", schemas: "https"
-    collection.add "nonsecure", ART::Route.new "/nonsecure", schemas: "http"
+    collection.add "secure", ART::Route.new "/secure", schemes: "https"
+    collection.add "nonsecure", ART::Route.new "/nonsecure", schemes: "http"
 
     collection
   end

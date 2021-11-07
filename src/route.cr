@@ -11,7 +11,7 @@ class Athena::Routing::Route
   property condition : Condition? = nil
 
   # TODO: Don't think we actually know what this is:
-  getter schemas : Set(String)? = nil
+  getter schemes : Set(String)? = nil
 
   @compiled_route : ART::CompiledRoute? = nil
 
@@ -21,16 +21,16 @@ class Athena::Routing::Route
     requirements : Hash(String, Regex | String) = Hash(String, Regex | String).new,
     @host : String? = nil,
     methods : String | Enumerable(String)? = nil,
-    schemas : String | Enumerable(String)? = nil
+    schemes : String | Enumerable(String)? = nil
   )
     self.path = @path
     self.add_defaults defaults
     self.add_requirements requirements
     self.methods = methods unless methods.nil?
-    self.schemas = schemas unless schemas.nil?
+    self.schemes = schemes unless schemes.nil?
   end
 
-  def_equals @path, @defaults, @requirements, @host, @methods, @schemas
+  def_equals @path, @defaults, @requirements, @host, @methods, @schemes
 
   {% begin %}
     def condition(&block : {{@top_level.has_constant?("Athena::Framework::Request") ? "Athena::Framework::Request".id : "HTTP::Request".id}} -> Bool) : Nil
@@ -53,10 +53,10 @@ class Athena::Routing::Route
     self
   end
 
-  def schemas=(schemas : String | Enumerable(String)) : self
-    schemas = schemas.is_a?(String) ? {schemas} : schemas
-    @schemas ||= Set(String).new
-    schemas.each { |s| @schemas.not_nil! << s.downcase }
+  def schemes=(schemes : String | Enumerable(String)) : self
+    schemes = schemes.is_a?(String) ? {schemes} : schemes
+    @schemes ||= Set(String).new
+    schemes.each { |s| @schemes.not_nil! << s.downcase }
 
     @compiled_route = nil
 

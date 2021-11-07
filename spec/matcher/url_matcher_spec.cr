@@ -209,6 +209,190 @@ struct URLMatcherTest < ASPEC::TestCase
     self.get_matcher(routes).match("/#{URI.encode_path_segment "\n"}/bar").should eq({"_route" => "foo", "foo" => "\n"})
   end
 
+  def test_match_regression : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{foo}"
+      add "bar", ART::Route.new "/foo/bar/{foo}"
+    end
+
+    self.get_matcher(routes).match("/foo/bar/bar").should eq({"_route" => "bar", "foo" => "bar"})
+
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/{bar}"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/"
+    end
+  end
+
+  def test_multiple_params : Nil
+    routes = self.build_collection do
+      add "foo1", ART::Route.new "/foo/{a}/{b}"
+      add "foo2", ART::Route.new "/foo/{a}/test/test/{b}"
+      add "foo3", ART::Route.new "/foo/{a}/{b}/{c}/{d}"
+    end
+
+    self.get_matcher(routes).match("/foo/test/test/test/bar").should eq({"_route" => "foo2", "a" => "test", "b" => "bar"})
+  end
+
+  def test_default_requirements_for_optional_variables : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{page}.{_format}", {"page" => "index", "_format" => "html"}
+    end
+
+    self.get_matcher(routes).match("/my-page.xml").should eq({"_route" => "test", "page" => "my-page", "_format" => "xml"})
+  end
+
+  def test_match_overridden_route : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo"
+    end
+
+    routes2 = self.build_collection do
+      add "foo", ART::Route.new "/foo1"
+    end
+
+    routes.add routes2
+
+    self.get_matcher(routes).match("/foo1").should eq({"_route" => "foo"})
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/foo"
+    end
+  end
+
+  def test_matching_is_eager : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{foo}-{bar}-", requirements: {"foo" => /.+/, "bar" => ".+"}
+    end
+
+    self.get_matcher(routes).match("/text1-text2-text3-text4-").should eq({"_route" => "test", "foo" => "text1-text2-text3", "bar" => "text4"})
+  end
+
+  def test_adjacent_variables : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{w}{x}{y}{z}.{_format}", {"z" => "default-z", "_format" => "html"}, {"y" => /y|Y/}
+    end
+
+    matcher = self.get_matcher routes
+
+    matcher.match("/wwwwwxYZ.xml").should eq({"_route" => "test", "_format" => "xml", "w" => "wwwww", "x" => "x", "y" => "Y", "z" => "Z"})
+    matcher.match("/wwwwwxyZZZ").should eq({"_route" => "test", "_format" => "html", "w" => "wwwww", "x" => "x", "y" => "y", "z" => "ZZZ"})
+    matcher.match("/wwwwwxy").should eq({"_route" => "test", "_format" => "html", "w" => "wwwww", "x" => "x", "y" => "y", "z" => "default-z"})
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      matcher.match "/wxy.html"
+    end
+  end
+
+  def test_optional_variable_with_no_real_separator : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/get{what}", {"what" => "All"}
+    end
+
+    matcher = self.get_matcher routes
+
+    matcher.match("/get").should eq({"_route" => "test", "what" => "All"})
+    matcher.match("/getSites").should eq({"_route" => "test", "what" => "Sites"})
+  end
+
+  def test_required_variable_with_no_real_separator : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/get{what}Suffix"
+    end
+
+    self.get_matcher(routes).match("/getSitesSuffix").should eq({"_route" => "test", "what" => "Sites"})
+  end
+
+  def test_default_requirement_of_variable : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{page}.{_format}"
+    end
+
+    self.get_matcher(routes).match("/index.mobile.html").should eq({"_route" => "test", "page" => "index", "_format" => "mobile.html"})
+  end
+
+  def test_default_requirement_of_variable_disallows_slash : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{page}.{_format}"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/index.sl/ash"
+    end
+  end
+
+  def test_default_requirement_of_variable_disallows_next_separator : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/{page}.{_format}", requirements: {"_format" => /html|xml/}
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/do.t.html"
+    end
+  end
+
+  def test_missing_trailing_slash : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo/"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/foo"
+    end
+  end
+
+  def test_extra_trailing_slash : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/foo/"
+    end
+  end
+
+  def test_missing_trailing_slash_non_safe_method : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo/"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo"
+    end
+  end
+
+  def test_extra_trailing_slash_non_safe_method : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo/"
+    end
+  end
+
+  def test_scheme_requirement : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo", schemes: "https"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/foo"
+    end
+  end
+
+  def test_scheme_requirement_non_safe_method : Nil
+    routes = self.build_collection do
+      add "test", ART::Route.new "/foo", schemes: "https"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo"
+    end
+  end
+
   private def build_collection(&) : ART::RouteCollection
     routes = ART::RouteCollection.new
 

@@ -8,12 +8,12 @@ struct RouteTest < ASPEC::TestCase
     route.requirements.should eq({"foo" => /\d+/})
     route.host.should eq "{locale}.example.com"
 
-    route = ART::Route.new "/", schemas: {"Https"}, methods: {"POST", "put"}
-    route.schemas.should eq Set{"https"}
+    route = ART::Route.new "/", schemes: {"Https"}, methods: {"POST", "put"}
+    route.schemes.should eq Set{"https"}
     route.methods.should eq Set{"POST", "PUT"}
 
-    route = ART::Route.new "/", schemas: "Https", methods: "Post"
-    route.schemas.should eq Set{"https"}
+    route = ART::Route.new "/", schemes: "Https", methods: "Post"
+    route.schemes.should eq Set{"https"}
     route.methods.should eq Set{"POST"}
   end
 

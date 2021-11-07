@@ -17,7 +17,8 @@ class Athena::Routing::Matcher::URLMatcher
   end
 
   def match(path : String) : Hash(String, String?)
-    allow = allow_schemas = Array(String).new
+    allow = Array(String).new
+    allow_schemas = Array(String).new
 
     if match = self.do_match path, allow, allow_schemas
       return match
