@@ -46,7 +46,7 @@ class Athena::Routing::Matcher::URLMatcher
     supports_redirect = false # TODO: Support this
 
     ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, required_host, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
-      if condition && (request = @request) && !(ART::RouteProvider.conditions[condition].call(request))
+      if condition && !(ART::RouteProvider.conditions[condition].call(@context, @request || self.build_request(path)))
         next
       end
 
@@ -97,7 +97,7 @@ class Athena::Routing::Matcher::URLMatcher
           # Dup the data hash so we don't mutate the original.
           data = data.dup
 
-          if condition && (request = @request) && !(ART::RouteProvider.conditions[condition].call(request))
+          if condition && !(ART::RouteProvider.conditions[condition].call(@context, @request || self.build_request(path)))
             next
           end
 
@@ -140,5 +140,21 @@ class Athena::Routing::Matcher::URLMatcher
     end
 
     nil
+  end
+
+  private def build_request(path : String) : ART::Request
+    request = HTTP::Request.new(
+      @context.method,
+      "#{@context.base_url}#{path}",
+      headers: HTTP::Headers{
+        "host" => %(#{@context.host}:#{"http" == @context.scheme ? @context.http_port : @context.https_port}),
+      }
+    )
+
+    {% if @top_level.has_constant? "Athena::Framework::Request" %}
+      request = Athena::Framework::Request.new request
+    {% end %}
+
+    request
   end
 end

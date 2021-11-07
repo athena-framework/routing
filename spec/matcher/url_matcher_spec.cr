@@ -393,6 +393,73 @@ struct URLMatcherTest < ASPEC::TestCase
     end
   end
 
+  def test_same_path_with_different_scheme : Nil
+    routes = self.build_collection do
+      add "https_route", ART::Route.new "/", schemes: "https"
+      add "http_route", ART::Route.new "/", schemes: "http"
+    end
+
+    self.get_matcher(routes).match("/").should eq({"_route" => "http_route"})
+  end
+
+  def test_condition : Nil
+    routes = self.build_collection do
+      route = ART::Route.new "/foo"
+      route.condition do |ctx|
+        "POST" == ctx.method
+      end
+
+      add "foo", route
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/foo"
+    end
+  end
+
+  def test_request_condition : Nil
+    routes = self.build_collection do
+      route = ART::Route.new "/foo/{bar}"
+      route.condition do |ctx, request|
+        request.path.starts_with? "/foo"
+      end
+
+      add "foo", route
+
+      route = ART::Route.new "/foo/{bar}"
+      route.condition do |ctx, request|
+        "/foo/foo" == request.path
+      end
+
+      add "bar", route
+    end
+
+    self.get_matcher(routes).match("/foo/bar").should eq({"_route" => "foo", "bar" => "bar"})
+  end
+
+  def test_decode_once : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{bar}"
+    end
+
+    self.get_matcher(routes).match("/foo/bar%2523").should eq({"_route" => "foo", "bar" => "bar%23"})
+  end
+
+  def test_cannot_rely_on_prefix : Nil
+    routes = self.build_collection do
+      sub_routes = self.build_collection do
+        add "bar", ART::Route.new "/bar"
+        add_prefix "/prefix"
+
+        get("bar").path = "/new"
+      end
+
+      add sub_routes
+    end
+
+    self.get_matcher(routes).match("/new").should eq({"_route" => "bar"})
+  end
+
   private def build_collection(&) : ART::RouteCollection
     routes = ART::RouteCollection.new
 
