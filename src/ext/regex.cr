@@ -53,6 +53,8 @@ class Athena::Routing::FastRegex
     end
   end
 
+  getter source : String
+
   @mark : UInt8* = Pointer(UInt8).null
 
   def initialize(@source : String)

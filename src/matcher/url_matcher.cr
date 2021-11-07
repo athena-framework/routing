@@ -92,7 +92,7 @@ class Athena::Routing::Matcher::URLMatcher
     matched_path = ART::RouteProvider.match_host ? "#{host}.#{path}" : path
 
     ART::RouteProvider.route_regexes.each do |offset, regex|
-      regex.match(matched_path).try do |match|
+      while match = regex.match matched_path
         ART::RouteProvider.dynamic_routes[matched_mark = match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
           # Dup the data hash so we don't mutate the original.
           data = data.dup
@@ -136,6 +136,8 @@ class Athena::Routing::Matcher::URLMatcher
 
           return data
         end
+
+        regex = ART::FastRegex.new regex.source.sub "(*:#{matched_mark})", "(*F)"
       end
     end
 

@@ -560,6 +560,33 @@ struct URLMatcherTest < ASPEC::TestCase
     matcher.match("/foo").should eq({"_route" => "bar"})
   end
 
+  def test_variable_variation_in_trailing_slash_with_method : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/{foo}/", methods: "POST"
+      add "bar", ART::Route.new "/{foo}", methods: "GET"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "POST"
+    matcher.match("/bar/").should eq({"_route" => "foo", "foo" => "bar"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "GET"
+    # pp ART::RouteProvider
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
+  def test_variable_variation_in_trailing_slash_with_method_reversed : Nil
+    routes = self.build_collection do
+      add "bar", ART::Route.new "/{foo}", methods: "GET"
+      add "foo", ART::Route.new "/{foo}/", methods: "POST"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "POST"
+    matcher.match("/bar/").should eq({"_route" => "foo", "foo" => "bar"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "GET"
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
   private def build_collection(&) : ART::RouteCollection
     routes = ART::RouteCollection.new
 
