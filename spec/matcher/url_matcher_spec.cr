@@ -587,6 +587,67 @@ struct URLMatcherTest < ASPEC::TestCase
     matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
   end
 
+  def test_mix_of_static_and_variable_variation_in_trailing_slash_with_hosts : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/", host: "foo.example.com"
+      add "bar", ART::Route.new "/{foo}", host: "bar.example.com"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "foo.example.com"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new host: "bar.example.com"
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
+  def test_mix_of_static_and_variable_variation_in_trailing_slash_with_methods : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/", methods: "POST"
+      add "bar", ART::Route.new "/{foo}", methods: "GET"
+    end
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "POST"
+    matcher.match("/foo/").should eq({"_route" => "foo"})
+
+    matcher = self.get_matcher routes, ART::RequestContext.new method: "GET"
+    matcher.match("/foo").should eq({"_route" => "bar", "foo" => "foo"})
+    matcher.match("/bar").should eq({"_route" => "bar", "foo" => "bar"})
+  end
+
+  def test_with_host_does_not_match
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{foo}", host: "{locale}.example.com"
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes, ART::RequestContext.new host: "example.com").match "/foo/bar"
+    end
+  end
+
+  def test_path_is_case_sensitive
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/{locale}", requirements: {"locale" => /EN|FR|DE/}
+    end
+
+    expect_raises ART::Exceptions::ResourceNotFound do
+      self.get_matcher(routes).match "/en"
+    end
+  end
+
+  def test_host_is_case_insensitive
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/", requirements: {"locale" => /EN|FR|DE/}, host: "{locale}.example.com"
+    end
+
+    self.get_matcher(routes, ART::RequestContext.new host: "en.example.com").match("/").should eq({"_route" => "foo", "locale" => "en"})
+  end
+
+  def test_no_configuration : Nil
+    expect_raises ART::Exceptions::NoConfiguration do
+      self.get_matcher(ART::RouteCollection.new).match "/"
+    end
+  end
+
   private def build_collection(&) : ART::RouteCollection
     routes = ART::RouteCollection.new
 

@@ -18,9 +18,9 @@ class Athena::Routing::Matcher::URLMatcher
 
   def match(path : String) : Hash(String, String?)
     allow = Array(String).new
-    allow_schemas = Array(String).new
+    allow_schemes = Array(String).new
 
-    if match = self.do_match path, allow, allow_schemas
+    if match = self.do_match path, allow, allow_schemes
       return match
     end
 
@@ -31,9 +31,9 @@ class Athena::Routing::Matcher::URLMatcher
     raise ART::Exceptions::ResourceNotFound.new "No routes found for '#{path}'."
   end
 
-  private def do_match(path : String, allow : Array(String), allow_schemas : Array(String)) : Hash(String, String?)?
+  private def do_match(path : String, allow : Array(String), allow_schemes : Array(String)) : Hash(String, String?)?
     allow.clear
-    allow_schemas.clear
+    allow_schemes.clear
 
     path = URI.decode(path).presence || "/"
     path = path.presence || "/"
@@ -45,7 +45,7 @@ class Athena::Routing::Matcher::URLMatcher
     canonical_method = "GET" if "HEAD" == request_method
     supports_redirect = false # TODO: Support this
 
-    ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, required_host, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
+    ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, required_host, required_methods, required_schemes, has_trailing_slash, has_trailing_var, condition|
       if condition && !(ART::RouteProvider.conditions[condition].call(@context, @request || self.build_request(path)))
         next
       end
@@ -73,15 +73,15 @@ class Athena::Routing::Matcher::URLMatcher
       end
 
       # TODO: Check schemas
-      has_required_scheme = required_schemas.nil? || required_schemas.includes? @context.scheme
+      has_required_scheme = required_schemes.nil? || required_schemes.includes? @context.scheme
       if has_required_scheme && required_methods && !required_methods.includes?(canonical_method) && !required_methods.includes?(request_method)
         allow.concat required_methods
         next
       end
 
       if !has_required_scheme
-        required_schemas.try do |schemes|
-          allow_schemas.concat schemes
+        required_schemes.try do |schemes|
+          allow_schemes.concat schemes
         end
         next
       end
@@ -93,7 +93,7 @@ class Athena::Routing::Matcher::URLMatcher
 
     ART::RouteProvider.route_regexes.each do |offset, regex|
       while match = regex.match matched_path
-        ART::RouteProvider.dynamic_routes[matched_mark = match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemas, has_trailing_slash, has_trailing_var, condition|
+        ART::RouteProvider.dynamic_routes[matched_mark = match.mark.not_nil!]?.try &.each do |data, vars, required_methods, required_schemes, has_trailing_slash, has_trailing_var, condition|
           # Dup the data hash so we don't mutate the original.
           data = data.dup
 
@@ -124,8 +124,8 @@ class Athena::Routing::Matcher::URLMatcher
             end
           end
 
-          if required_schemas && required_schemas.includes? @context.scheme
-            allow_schemas.concat required_schemas
+          if required_schemes && required_schemes.includes? @context.scheme
+            allow_schemes.concat required_schemes
             next
           end
 
@@ -139,6 +139,10 @@ class Athena::Routing::Matcher::URLMatcher
 
         regex = ART::FastRegex.new regex.source.sub "(*:#{matched_mark})", "(*F)"
       end
+    end
+
+    if "/" == path && allow.empty? && allow_schemes.empty?
+      raise ART::Exceptions::NoConfiguration.new
     end
 
     nil

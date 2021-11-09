@@ -16,6 +16,9 @@ description: |
 authors:
   - George Dietrich <george@dietrich.app>
 
+libraries:
+  libpcre2: '*'
+
 development_dependencies:
   ameba:
     github: crystal-ameba/ameba
