@@ -31,6 +31,7 @@ class Athena::Routing::Matcher::URLMatcher
     raise ART::Exceptions::ResourceNotFound.new "No routes found for '#{path}'."
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def do_match(path : String, allow : Array(String), allow_schemes : Array(String)) : Hash(String, String?)?
     allow.clear
     allow_schemes.clear
@@ -43,9 +44,11 @@ class Athena::Routing::Matcher::URLMatcher
     host = @context.host.downcase if ART::RouteProvider.match_host
 
     canonical_method = "GET" if "HEAD" == request_method
+
+    # ameba:disable Lint/UselessAssign
     supports_redirect = false # TODO: Support this
 
-    ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, required_host, required_methods, required_schemes, has_trailing_slash, has_trailing_var, condition|
+    ART::RouteProvider.static_routes[trimmed_path]?.try &.each do |data, required_host, required_methods, required_schemes, has_trailing_slash, _, condition|
       if condition && !(ART::RouteProvider.conditions[condition].call(@context, @request || self.build_request(path)))
         next
       end
@@ -140,6 +143,7 @@ class Athena::Routing::Matcher::URLMatcher
         end
 
         regex = ART::FastRegex.new regex.source.sub "(*:#{matched_mark})", "(*F)"
+        offset += matched_mark.size
       end
     end
 

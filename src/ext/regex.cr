@@ -61,7 +61,7 @@ class Athena::Routing::FastRegex
     # Automatically apply `DOTALL` and `DOLLAR_ENDONLY` options.
     unless @code = LibPCRE2.compile @source, @source.bytesize, 0x00000010 | 0x00000020, out error_code, out error_offset, nil
       bytes = Bytes.new 128
-      err = LibPCRE2.get_error_message(error_code, bytes, bytes.size)
+      LibPCRE2.get_error_message(error_code, bytes, bytes.size)
       raise ArgumentError.new "#{String.new(bytes)} at #{error_offset}"
     end
 
@@ -73,9 +73,9 @@ class Athena::Routing::FastRegex
 
   def match(str, pos = 0) : MatchData?
     if byte_index = str.char_index_to_byte_index(pos)
-      match = match_at_byte_index(str, byte_index)
+      match_at_byte_index(str, byte_index)
     else
-      match = nil
+      nil
     end
   end
 
@@ -111,7 +111,7 @@ class Athena::Routing::FastRegex
     unless (match = LibPCRE2.jit_match @code, str, str.bytesize, byte_index, 0, @match_data, nil) > 0
       return false if match == LibPCRE2::ERROR_NOMATCH
       bytes = Bytes.new 128
-      err = LibPCRE2.get_error_message(match, bytes, bytes.size)
+      LibPCRE2.get_error_message(match, bytes, bytes.size)
       raise ArgumentError.new String.new bytes
     end
 

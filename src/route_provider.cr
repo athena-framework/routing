@@ -153,6 +153,7 @@ class Athena::Routing::RouteProvider
     @@compiled = true
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def self.compile_dynamic_routes(collection : ART::RouteCollection, match_host : Bool, chunk_limit : Int, conditions : Array(Condition)) : Nil
     dr = Hash(String, Array(DynamicRouteData)).new
 
@@ -176,12 +177,12 @@ class Athena::Routing::RouteProvider
       routes.not_nil!.add name, route
     end
 
-    collections.each do |collection|
+    collections.each do |sub_collection|
       previous_regex = false
       per_host_routes = Array(Tuple(Regex?, ART::RouteCollection)).new
       host_routes = nil
 
-      collection.each do |name, route|
+      sub_collection.each do |name, route|
         regex = route.compile.host_regex
         if previous_regex != regex
           host_routes = ART::RouteCollection.new
@@ -198,7 +199,7 @@ class Athena::Routing::RouteProvider
       state.mark += final_regex.size + 1 # Add 1 to account for the eventual `/`.
       state.regex = final_regex
 
-      per_host_routes.each do |host_regex, routes|
+      per_host_routes.each do |host_regex, sub_routes|
         if match_host
           if host_regex
             host_regex.source.match(/^\^(.*)\$$/).try do |match|
@@ -220,7 +221,7 @@ class Athena::Routing::RouteProvider
 
         tree = ART::RouteProvider::StaticPrefixCollection.new
 
-        routes.each do |name, route|
+        sub_routes.each do |name, route|
           matched_regex = route.compile.regex.source.match(/\^(.*)\$$/).not_nil!
 
           state.vars = Set(String).new
@@ -372,6 +373,7 @@ class Athena::Routing::RouteProvider
     }
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def self.group_static_routes(routes : ART::RouteCollection) : Tuple(StaticRoutes, ART::RouteCollection)
     static_routes = Hash(String, Hash(String, PreCompiledStaticRoute)).new { |hash, key| hash[key] = Hash(String, PreCompiledStaticRoute).new }
     dynamic_regex = Array(PreCompiledDynamicRegex).new

@@ -81,6 +81,7 @@ module Athena::Routing::RouteCompiler
     )
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def self.compile_pattern(route : Route, pattern : String, is_host : Bool)
     pos = 0
     variables = Set(String).new
@@ -144,7 +145,7 @@ module Athena::Routing::RouteCompiler
       while idx >= 0
         token = tokens[idx]
 
-        break unless token.type.variable? && !token.important && route.has_default?(token.var_name.not_nil!)
+        break if !token.type.variable? || token.important || !route.has_default?(token.var_name.not_nil!)
 
         first_optional_index = idx
         idx -= 1
@@ -152,8 +153,8 @@ module Athena::Routing::RouteCompiler
     end
 
     route_pattern = ""
-    tokens.each_with_index do |token, idx|
-      route_pattern += self.compute_regex tokens, idx, first_optional_index
+    tokens.each_with_index do |_, i|
+      route_pattern += self.compute_regex tokens, i, first_optional_index
     end
 
     route_regex = Regex.new "^#{route_pattern}$", is_host ? Regex::Options::IGNORE_CASE : Regex::Options::None

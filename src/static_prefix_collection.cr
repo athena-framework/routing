@@ -23,6 +23,7 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
 
   def initialize(@prefix : String = "/"); end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def add_route(prefix : String, route : StaticTreeNamedRoute | StaticPrefixTreeRoute | StaticTreeName | self) : Nil
     prefix, static_prefix = self.common_prefix prefix, prefix
 
@@ -70,6 +71,7 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
       return
     end
 
+    # ameba:disable Lint/UnreachableCode
     @static_prefixes << static_prefix
     @prefixes << prefix
     @items << route
@@ -88,6 +90,7 @@ class Athena::Routing::RouteProvider::StaticPrefixCollection
     routes
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   protected def common_prefix(prefix : String, other_prefix : String) : Tuple(String, String)
     base_length = @prefix.size
     end_size = Math.min(prefix.size, other_prefix.size)

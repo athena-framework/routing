@@ -1,6 +1,5 @@
 require "../spec_helper"
 
-@[ASPEC::TestCase::Focus]
 struct URLMatcherTest < ASPEC::TestCase
   def tear_down : Nil
     ART::RouteProvider.reset
@@ -38,7 +37,7 @@ struct URLMatcherTest < ASPEC::TestCase
     ex.allowed_methods.should eq ["GET"]
   end
 
-  def test_match_head_allowed_when_requirements_includes_GET : Nil
+  def test_match_head_allowed_when_requirements_includes_get : Nil
     routes = self.build_collection do
       add "foo", ART::Route.new "/foo", methods: "get"
     end
@@ -64,7 +63,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/foo/{bar}"
     end
 
-    ex = expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exceptions::ResourceNotFound do
       self.get_matcher(routes).match "/no-match"
     end
 
@@ -420,14 +419,14 @@ struct URLMatcherTest < ASPEC::TestCase
   def test_match_request_condition : Nil
     routes = self.build_collection do
       route = ART::Route.new "/foo/{bar}"
-      route.condition do |ctx, request|
+      route.condition do |_, request|
         request.path.starts_with? "/foo"
       end
 
       add "foo", route
 
       route = ART::Route.new "/foo/{bar}"
-      route.condition do |ctx, request|
+      route.condition do |_, request|
         "/foo/foo" == request.path
       end
 

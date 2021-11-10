@@ -5,7 +5,6 @@ false
   "/head_and_get"  => [{ {"_route" => "head_and_get"}, nil, Set{"HEAD", "GET"}, nil, false, false, nil }],
   "/get_and_head"  => [{ {"_route" => "get_and_head"}, nil, Set{"GET", "HEAD"}, nil, false, false, nil }],
   "/post_and_head" => [{ {"_route" => "post_and_head"}, nil, Set{"POST", "HEAD"}, nil, false, false, nil }],
-  "/post_and_head" => [{ {"_route" => "post_and_head"}, nil, Set{"POST", "HEAD"}, nil, false, false, nil }],
   "/put_and_post"  => [
     { {"_route" => "put_and_post"}, nil, Set{"PUT", "POST"}, nil, false, false, nil },
     { {"_route" => "put_and_get_and_head"}, nil, Set{"PUT", "GET", "HEAD"}, nil, false, false, nil },

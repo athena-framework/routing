@@ -166,7 +166,7 @@ class Athena::Routing::Route
         self.set_requirement match[2], requirement[1...-1]
       end
 
-      if default = match[4]?.presence
+      if match[4]?.presence
         self.set_default match[2], "?" != match[4] ? match[4][1..] : nil
       end
 
