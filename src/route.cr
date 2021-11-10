@@ -32,8 +32,8 @@ class Athena::Routing::Route
 
   def_equals @path, @defaults, @requirements, @host, @methods, @schemes
 
-  def condition(&block : ART::RequestContext, ART::Request -> Bool) : Nil
-    @condition = block
+  def condition(&@condition : ART::RequestContext, ART::Request -> Bool) : self
+    self
   end
 
   def host=(pattern : String | Regex) : self

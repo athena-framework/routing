@@ -103,9 +103,11 @@ class Athena::Routing::Matcher::URLMatcher
 
           has_trailing_var = trimmed_path != path && has_trailing_var
 
-          has_n = has_trailing_slash || false # FIXME: When some test fails because of it :S
-
-          if has_trailing_var && has_n && (sub_match = regex.match(ART::RouteProvider.match_host ? "#{host}.#{trimmed_path}" : trimmed_path)) && (matched_mark == sub_match.mark.not_nil!)
+          if (
+               has_trailing_var &&
+               (has_trailing_slash || (!vars || (n = match[vars.size]?).nil?) || ('/' != (n.try &.[-1]? || '/'))) &&
+               (sub_match = regex.match(ART::RouteProvider.match_host ? "#{host}.#{trimmed_path}" : trimmed_path)) && (matched_mark == sub_match.mark.not_nil!)
+             )
             if has_trailing_slash
               match = sub_match
             else

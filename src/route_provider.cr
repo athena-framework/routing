@@ -402,7 +402,11 @@ class Athena::Routing::RouteProvider
         should_next = dynamic_regex.each do |dr|
           host_regex_matches = host ? dr.host_regex.try &.matches?(host) : false
 
-          if (dr.static_prefix.empty? || url.starts_with?(dr.static_prefix)) && (dr.regex.matches?(url) || dr.regex.matches?("#{url}/")) && (host.presence || host_regex.nil? || host_regex_matches)
+          if (
+               (dr.static_prefix.empty? || url.starts_with?(dr.static_prefix)) &&
+               (dr.regex.matches?(url) || dr.regex.matches?("#{url}/")) &&
+               (host.presence.nil? || host_regex.nil? || host_regex_matches)
+             )
             dynamic_regex << PreCompiledDynamicRegex.new host_regex, regex, static_prefix
             dynamic_routes.add name, route
             break true
