@@ -12,7 +12,7 @@ class Athena::Routing::Generator::URLGenerator
   end
 
   def generate(route : String, params : Hash(String, _) = Hash(String, String).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
-    if locale = params["_locale"]? || @default_locale
+    if locale = params["_locale"]? || @context.parameters["_locale"]? || @default_locale
       if (locale_route = ART::RouteProvider.route_generation_data["#{route}.#{locale}"]?) && (route == locale_route[1]["_canonical_route"]?)
         route = "#{route}.#{locale}"
       end
@@ -49,12 +49,12 @@ class Athena::Routing::Generator::URLGenerator
     merged_params = defaults.merge params
 
     unless (missing_params = variables - merged_params.keys).empty?
-      raise "Missing params #{missing_params}"
+      raise ART::Exceptions::MissingRequiredParameters.new %(Cannot generate URL for route '#{name}'. Missing required parameters: #{missing_params.join(", ") { |p| "'#{p}'" }}.)
     end
 
     url = ""
     optional = true
-    message = "Route parameter '{parameter}' for route '{route}' must match '{expected}' (got '{given}') to generate the correspdonding URL."
+    message = "Parameter '%s' for route '%s' must match '%s' (got '%s') to generate the corresponding URL."
     tokens.each do |token|
       case token.type
       in .variable?
@@ -62,8 +62,12 @@ class Athena::Routing::Generator::URLGenerator
         important = token.important?
 
         if !optional || important || !defaults.has_key?(var_name) || (!merged_params[var_name]?.nil? && merged_params[var_name].to_s != defaults[var_name].to_s)
-          if !@strict_requirements.nil? && !(token.var_name || "").matches?(/./)
-            raise "Invalid param" if @strict_requirements
+          if !@strict_requirements.nil? && (r = token.regex) && !(token.var_name || "").matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
+            if @strict_requirements
+              raise ART::Exceptions::InvalidParameter.new message % {var_name, name, r, merged_params[var_name]}
+            end
+
+            # TOOD: Add logger integration
 
             return ""
           end
