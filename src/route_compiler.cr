@@ -15,7 +15,7 @@ module Athena::Routing::RouteCompiler
     getter regex : Regex?
     getter var_name : String?
     getter regex_options : Nil
-    getter important : Bool
+    getter? important : Bool
 
     def initialize(
       @type : Type,
@@ -145,7 +145,7 @@ module Athena::Routing::RouteCompiler
       while idx >= 0
         token = tokens[idx]
 
-        break if !token.type.variable? || token.important || !route.has_default?(token.var_name.not_nil!)
+        break if !token.type.variable? || token.important? || !route.has_default?(token.var_name.not_nil!)
 
         first_optional_index = idx
         idx -= 1

@@ -4,12 +4,14 @@ require "http/request"
 
 require "./compiled_route"
 require "./request_context"
+require "./request_context_aware_interface"
 require "./route"
 require "./route_collection"
 require "./route_compiler"
 require "./route_provider"
 
 require "./exceptions/*"
+require "./generator/*"
 require "./matcher/*"
 
 # Convenience alias to make referencing `Athena::Routing` types easier.

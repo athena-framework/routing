@@ -15,6 +15,10 @@ class Athena::Routing::RouteProvider
   # defaults, host, methods, schemas, trailing slash?, trailing var?, conditions
   alias StaticRouteData = Tuple(Hash(String, String?), String | Regex | Nil, Set(String)?, Set(String)?, Bool, Bool, Int32?)
 
+  # We store this as a tuple in order to get splatting/unpacking features.
+  # variables, defaults, requirements, tokens, host tokens, schemes
+  alias RouteGenerationData = Tuple(Set(String), Hash(String, String?), Hash(String, Regex), Array(ART::RouteCompiler::Token), Array(ART::RouteCompiler::Token), Set(String)?)
+
   private record PreCompiledStaticRoute, route : ART::Route, has_trailing_slash : Bool
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String
   private record PreCompiledDynamicRoute, pattern : String, routes : ART::RouteCollection
@@ -45,11 +49,12 @@ class Athena::Routing::RouteProvider
   @@route_regexes : Hash(Int32, ART::FastRegex) = Hash(Int32, ART::FastRegex).new
   @@dynamic_routes : Hash(String, Array(DynamicRouteData)) = Hash(String, Array(DynamicRouteData)).new
   @@conditions : Hash(Int32, Condition) = Hash(Int32, Condition).new
+  @@route_generation_data : Hash(String, RouteGenerationData) = Hash(String, RouteGenerationData).new
 
-  @@compiled : Bool = false
+  protected class_getter? compiled : Bool = false
 
   def self.compile(routes : ART::RouteCollection) : Nil
-    return unless @@routes.nil?
+    return if @@compiled
 
     @@routes = routes
   end
@@ -84,6 +89,12 @@ class Athena::Routing::RouteProvider
     @@conditions
   end
 
+  def self.route_generation_data : Hash(String, RouteGenerationData)
+    self.compile unless @@compiled
+
+    @@route_generation_data
+  end
+
   def self.inspect(io : IO) : Nil
     io << "Match Host:  "
     self.match_host.inspect io
@@ -95,6 +106,8 @@ class Athena::Routing::RouteProvider
     self.dynamic_routes.inspect io
     io << "\n\nConditions:  "
     self.conditions.inspect io
+    io << "\n\nRoute Generation Data:  "
+    self.route_generation_data.inspect io
     io << "\n\n"
   end
 
@@ -148,6 +161,19 @@ class Athena::Routing::RouteProvider
       end
 
       raise e
+    end
+
+    self.routes.each do |name, route|
+      compiled_route = route.compile
+
+      @@route_generation_data[name] = {
+        compiled_route.variables,
+        route.defaults,
+        route.requirements,
+        compiled_route.tokens,
+        compiled_route.host_tokens,
+        route.schemes,
+      }
     end
 
     @@compiled = true
@@ -328,7 +354,7 @@ class Athena::Routing::RouteProvider
   end
 
   private def self.compile_dynamic_route(route : ART::Route, name : String, vars : Set(String)?, has_trailing_slash : Bool, has_trailing_var : Bool, conditions : Array(Condition)) : DynamicRouteData
-    defaults = route.defaults
+    defaults = route.defaults.dup
 
     if cannonical_route = defaults["_canonical_route"]?
       name = cannonical_route
@@ -351,7 +377,7 @@ class Athena::Routing::RouteProvider
   end
 
   private def self.compile_static_route(route : ART::Route, name : String, host : String | Regex | Nil, has_trailing_slash : Bool, has_trailing_var : Bool, conditions : Array(Condition)) : StaticRouteData
-    defaults = route.defaults
+    defaults = route.defaults.dup
 
     if cannonical_route = defaults["_canonical_route"]?
       name = cannonical_route
