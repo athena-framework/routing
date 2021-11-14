@@ -17,7 +17,7 @@ class Athena::Routing::Route
 
   def initialize(
     @path : String,
-    defaults : Hash(String, String?) = Hash(String, String?).new,
+    defaults : Hash(String, _) = Hash(String, String?).new,
     requirements : Hash(String, Regex | String) = Hash(String, Regex | String).new,
     @host : String? = nil,
     methods : String | Enumerable(String)? = nil,
@@ -83,19 +83,19 @@ class Athena::Routing::Route
     @defaults[key]?
   end
 
-  def defaults=(defaults : Hash(String, String?)) : self
+  def defaults=(defaults : Hash(String, _)) : self
     @defaults.clear
 
     self.add_defaults defaults
   end
 
-  def add_defaults(defaults : Hash(String, String?)) : self
+  def add_defaults(defaults : Hash(String, _)) : self
     if defaults.has_key?("_locale") && self.localized?
       defaults.delete "_locale"
     end
 
     defaults.each do |key, value|
-      @defaults[key] = value
+      @defaults[key] = value.nil? ? value : value.to_s
     end
 
     @compiled_route = nil

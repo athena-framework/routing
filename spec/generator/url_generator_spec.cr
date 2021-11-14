@@ -291,6 +291,56 @@ struct URLGeneratorTest < ASPEC::TestCase
       .generate("test", {"default" => nil}).should eq "/base/test"
   end
 
+  def test_generate_query_param_same_as_default : Nil
+    generator = self.generator self.routes ART::Route.new "/test", {"page" => 1}
+
+    generator.generate("test", page: 2).should eq "/base/test?page=2"
+    generator.generate("test", page: 1).should eq "/base/test"
+    generator.generate("test", page: "1").should eq "/base/test"
+    generator.generate("test").should eq "/base/test"
+  end
+
+  # TODO: Also support array defaults.
+
+  def test_generate_special_route_name : Nil
+    self
+      .generator(self.routes(ART::Route.new("/bar"), name: "$péß^a|"))
+      .generate("$péß^a|").should eq "/base/bar"
+  end
+
+  def test_generate_url_encoding : Nil
+    expected_path = "/base/@:%5B%5D/%28%29*%27%22%20+,;-._~%26%24%3C%3E|%7B%7D%25%5C%5E%60!%3Ffoo=bar%23id/@:%5B%5D/%28%29*%27%22%20+,;-._~%26%24%3C%3E|%7B%7D%25%5C%5E%60!%3Ffoo=bar%23id?query=@:%5B%5D/%28%29*%27%22+%2B,;-._~%26%24%3C%3E%7C%7B%7D%25%5C%5E%60!?foo%3Dbar%23id"
+    chars = "@:[]/()*'\" +,;-._~&$<>|{}%\\^`!?foo=bar#id"
+
+    self
+      .generator(self.routes(ART::Route.new("/#{chars}/{path}", requirements: {"path" => /.+/})))
+      .generate("test", {"path" => chars, "query" => chars}).should eq expected_path
+  end
+
+  def test_generate_encoding_of_relative_path_segments_double_dot : Nil
+    self
+      .generator(self.routes(ART::Route.new("/dir/../dir/..")))
+      .generate("test").should eq "/base/dir/%2E%2E/dir/%2E%2E"
+  end
+
+  def test_generate_encoding_of_relative_path_segments_single_dot : Nil
+    self
+      .generator(self.routes(ART::Route.new("/dir/./dir/.")))
+      .generate("test").should eq "/base/dir/%2E/dir/%2E"
+  end
+
+  def test_generate_encoding_of_relative_path_segments_unencoded_dots : Nil
+    self
+      .generator(self.routes(ART::Route.new("/a./.a/a../..a/...")))
+      .generate("test").should eq "/base/a./.a/a../..a/..."
+  end
+
+  def test_generate_encoding_of_slash_in_path : Nil
+    self
+      .generator(self.routes(ART::Route.new("/dir/{path}/dir2", requirements: {"path" => /.+/})))
+      .generate("test", path: "foo/bar%2Fbaz").should eq "/base/dir/foo/bar%2Fbaz/dir2"
+  end
+
   def test_generate_host_same_as_context_absolute_url : Nil
     self
       .generator(self.routes(ART::Route.new("/{name}", host: "{locale}.example.com")), context: ART::RequestContext.new(base_url: "/base", host: "fr.example.com"))
@@ -303,9 +353,9 @@ struct URLGeneratorTest < ASPEC::TestCase
     ART::Generator::URLGenerator.new context, default_locale
   end
 
-  private def routes(route : ART::Route) : ART::RouteCollection
+  private def routes(route : ART::Route, *, name : String = "test") : ART::RouteCollection
     routes = ART::RouteCollection.new
-    routes.add "test", route
+    routes.add name, route
 
     ART.compile routes
 
