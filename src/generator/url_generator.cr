@@ -11,7 +11,15 @@ class Athena::Routing::Generator::URLGenerator
   )
   end
 
-  def generate(route : String, params : Hash(String, _) = Hash(String, String).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
+  def generate(route : String, reference_type : ART::Generator::ReferenceType = :absolute_path, **params) : String
+    self.generate route, params.to_h, reference_type
+  end
+
+  def generate(route : String, params : Hash(String, _) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
+    self.generate route, params.transform_values { |v| v.nil? ? v : v.to_s }, reference_type
+  end
+
+  def generate(route : String, params : Hash(String, String?) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
     if locale = params["_locale"]? || @context.parameters["_locale"]? || @default_locale
       if (locale_route = ART::RouteProvider.route_generation_data["#{route}.#{locale}"]?) && (route == locale_route[1]["_canonical_route"]?)
         route = "#{route}.#{locale}"
@@ -40,13 +48,16 @@ class Athena::Routing::Generator::URLGenerator
     defaults : Hash(String, String?),
     requirements : Hash(String, Regex),
     tokens : Array(ART::RouteCompiler::Token),
-    params : Hash(String, _),
+    params : Hash(String, String?),
     name : String,
     reference_type : ART::Generator::ReferenceType,
     host_tokens : Array(ART::RouteCompiler::Token),
     required_schemes : Set(String)?
   ) : String
-    merged_params = defaults.merge(@context.parameters).merge params
+    merged_params = Hash(String, String?).new
+    merged_params.merge! defaults
+    merged_params.merge! @context.parameters
+    merged_params.merge! params
 
     unless (missing_params = variables - merged_params.keys).empty?
       raise ART::Exceptions::MissingRequiredParameters.new %(Cannot generate URL for route '#{name}'. Missing required parameters: #{missing_params.join(", ") { |p| "'#{p}'" }}.)
@@ -92,16 +103,38 @@ class Athena::Routing::Generator::URLGenerator
     scheme = @context.scheme
 
     if required_schemes
-      if rs = required_schemes.find &.==(scheme)
+      unless required_schemes.includes? scheme
         reference_type = ART::Generator::ReferenceType::ABSOLUTE_URL
-        scheme = rs
+        scheme = required_schemes.to_a.first
       end
     end
 
     unless host_tokens.empty?
-      route_hose = ""
+      route_host = ""
 
-      # TODO: Build out host stuff.
+      host_tokens.each do |token|
+        case token.type
+        in .variable?
+          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
+            if @strict_requirements
+              raise ART::Exceptions::InvalidParameter.new message % {token.var_name, name, r, merged_params[token.var_name]}
+            end
+
+            # TOOD: Add logger integration
+
+            return ""
+          end
+
+          route_host = "#{token.prefix}#{merged_params[token.var_name]}#{route_host}"
+        in .text?
+          route_host = "#{token.prefix}#{route_host}"
+        end
+      end
+
+      if route_host != host
+        host = route_host
+        reference_type = ART::Generator::ReferenceType::NETWORK_PATH unless reference_type.absolute_url?
+      end
     end
 
     if reference_type.absolute_url? || reference_type.network_path?

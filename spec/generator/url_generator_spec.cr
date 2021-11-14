@@ -235,6 +235,62 @@ struct URLGeneratorTest < ASPEC::TestCase
     end
   end
 
+  def test_generate_required_param_empty_string : Nil
+    generator = self.generator self.routes ART::Route.new "/{slug}", requirements: {"slug" => /.+/}
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", {"slug" => ""}
+    end
+  end
+
+  def test_generate_scheme_requirement_does_nothing_if_same_as_current_scheme : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", schemes: "http")), context: ART::RequestContext.new base_url: "/base", scheme: "http")
+      .generate("test").should eq "/base/"
+  end
+
+  def test_generate_scheme_requirement_does_nothing_if_same_as_current_scheme_secure : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", schemes: "https")), context: ART::RequestContext.new base_url: "/base", scheme: "https")
+      .generate("test").should eq "/base/"
+  end
+
+  def test_generate_scheme_requirement_forces_absolute_url : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", schemes: "http")), context: ART::RequestContext.new base_url: "/base", scheme: "https")
+      .generate("test").should eq "http://localhost/base/"
+  end
+
+  def test_generate_scheme_requirement_forces_absolute_url_secure : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", schemes: "https")))
+      .generate("test").should eq "https://localhost/base/"
+  end
+
+  def test_generate_scheme_requirement_creates_url_for_first_required_scheme : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", schemes: {"Ftp", "https"})))
+      .generate("test").should eq "ftp://localhost/base/"
+  end
+
+  def test_generate_scheme_requirement_creates_url_for_first_required_scheme : Nil
+    self
+      .generator(self.routes(ART::Route.new("//path-and-not-domain")), context: ART::RequestContext.new)
+      .generate("test").should eq "/path-and-not-domain"
+  end
+
+  def test_generate_no_trailing_slash_for_multiple_optional_parameters : Nil
+    self
+      .generator(self.routes(ART::Route.new("/category/{slug1}/{slug2}/{slug3}", {"slug2" => nil, "slug3" => nil})))
+      .generate("test", {"slug1" => "foo"}).should eq "/base/category/foo"
+  end
+
+  def test_generate_nil_for_optional_parameter_is_ignored : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test/{default}", {"default" => "0"})))
+      .generate("test", {"default" => nil}).should eq "/base/test"
+  end
+
   def test_generate_host_same_as_context_absolute_url : Nil
     self
       .generator(self.routes(ART::Route.new("/{name}", host: "{locale}.example.com")), context: ART::RequestContext.new(base_url: "/base", host: "fr.example.com"))

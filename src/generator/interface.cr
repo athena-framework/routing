@@ -4,5 +4,5 @@
 module Athena::Routing::Generator::Interface
   include Athena::Routing::RequestContextAwareInterface
 
-  abstract def generate(route : String, params : Hash(String, _) = Hash(String, String).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
+  abstract def generate(route : String, params : Hash(String, String?) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
 end
