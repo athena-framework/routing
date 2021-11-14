@@ -46,7 +46,7 @@ class Athena::Routing::Generator::URLGenerator
     host_tokens : Array(ART::RouteCompiler::Token),
     required_schemes : Set(String)?
   ) : String
-    merged_params = defaults.merge params
+    merged_params = defaults.merge(@context.parameters).merge params
 
     unless (missing_params = variables - merged_params.keys).empty?
       raise ART::Exceptions::MissingRequiredParameters.new %(Cannot generate URL for route '#{name}'. Missing required parameters: #{missing_params.join(", ") { |p| "'#{p}'" }}.)
@@ -62,7 +62,7 @@ class Athena::Routing::Generator::URLGenerator
         important = token.important?
 
         if !optional || important || !defaults.has_key?(var_name) || (!merged_params[var_name]?.nil? && merged_params[var_name].to_s != defaults[var_name].to_s)
-          if !@strict_requirements.nil? && (r = token.regex) && !(token.var_name || "").matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
+          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
             if @strict_requirements
               raise ART::Exceptions::InvalidParameter.new message % {var_name, name, r, merged_params[var_name]}
             end

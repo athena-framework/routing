@@ -6,11 +6,61 @@ struct URLGeneratorTest < ASPEC::TestCase
     ART::RouteProvider.reset
   end
 
-  @[DataProvider("test_absolute_url_provider")]
-  def test_generate(expected : String, route : ART::Route, reference_type : ART::Generator::ReferenceType, context : ART::RequestContext?, default_locale : String?) : Nil
+  def test_generate_default_port : Nil
     self
-      .generator(self.routes(route), context: context, default_locale: default_locale)
-      .generate("test", reference_type: reference_type).should eq expected
+      .generator(self.routes(ART::Route.new("/test")))
+      .generate("test", reference_type: :absolute_url).should eq "http://localhost/base/test"
+  end
+
+  def test_generate_secure_default_port : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test")), context: ART::RequestContext.new(base_url: "/base", scheme: "https"))
+      .generate("test", reference_type: :absolute_url).should eq "https://localhost/base/test"
+  end
+
+  def test_generate_non_standard_port : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test")), context: ART::RequestContext.new(base_url: "/base", http_port: 8080))
+      .generate("test", reference_type: :absolute_url).should eq "http://localhost:8080/base/test"
+  end
+
+  def test_generate_secure_non_standard_port : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test")), context: ART::RequestContext.new(base_url: "/base", scheme: "https", https_port: 8080))
+      .generate("test", reference_type: :absolute_url).should eq "https://localhost:8080/base/test"
+  end
+
+  def test_generate_no_parameters : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test")))
+      .generate("test").should eq "/base/test"
+  end
+
+  def test_generate_with_parameters : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test/{foo}")))
+      .generate("test", {"foo" => "bar"}).should eq "/base/test/bar"
+  end
+
+  def test_generate_nil_parameter : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test.{format}", {"format" => nil})))
+      .generate("test").should eq "/base/test"
+  end
+
+  def test_generate_nil_parameter_required : Nil
+    generator = self.generator self.routes ART::Route.new "/test/{foo}/bar", {"foo" => nil}
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test"
+    end
+  end
+
+  def test_generate_not_passed_optional_parameter_in_between : Nil
+    generator = self.generator self.routes ART::Route.new "/{slug}/{page}", {"slug" => "index", "page" => "0"}
+
+    generator.generate("test", {"page" => 1}).should eq "/base/index/1"
+    generator.generate("test").should eq "/base/"
   end
 
   @[DataProvider("query_param_provider")]
@@ -20,44 +70,70 @@ struct URLGeneratorTest < ASPEC::TestCase
       .generate("test", {key => value}, reference_type: :absolute_url).should eq "http://localhost/base/test#{expected}"
   end
 
-  def test_absolute_url_provider : Hash
-    {
-      "default port" => {
-        "http://localhost/base/test",
-        ART::Route.new("/test"),
-        ART::Generator::ReferenceType::ABSOLUTE_URL,
-        nil,
-        nil,
-      },
-      "secure default port" => {
-        "https://localhost/base/test",
-        ART::Route.new("/test"),
-        ART::Generator::ReferenceType::ABSOLUTE_URL,
-        ART::RequestContext.new(base_url: "/base", scheme: "https"),
-        nil,
-      },
-      "non standard port" => {
-        "http://localhost:8080/base/test",
-        ART::Route.new("/test"),
-        ART::Generator::ReferenceType::ABSOLUTE_URL,
-        ART::RequestContext.new(base_url: "/base", http_port: 8080),
-        nil,
-      },
-      "secure non standard port" => {
-        "https://localhost:8080/base/test",
-        ART::Route.new("/test"),
-        ART::Generator::ReferenceType::ABSOLUTE_URL,
-        ART::RequestContext.new(base_url: "/base", https_port: 8080, scheme: "https"),
-        nil,
-      },
-    }
-  end
-
   def query_param_provider : Hash
     {
       "nil value"    => {"", "foo", nil},
       "string value" => {"?foo=bar", "foo", "bar"},
     }
+  end
+
+  def test_generate_extra_param_from_globals : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test")), context: ART::RequestContext.new(base_url: "/base").set_parameter("bar", "bar"))
+      .generate("test", {"foo" => "bar"}).should eq "/base/test?foo=bar"
+  end
+
+  def test_generate_param_from_globals : Nil
+    self
+      .generator(self.routes(ART::Route.new("/test/{foo}")), context: ART::RequestContext.new(base_url: "/base").set_parameter("foo", "bar"))
+      .generate("test").should eq "/base/test/bar"
+  end
+
+  def test_generate_param_from_globals_overrides_defaults : Nil
+    self
+      .generator(self.routes(ART::Route.new("/{_locale}", {"_locale" => "en"})), context: ART::RequestContext.new(base_url: "/base").set_parameter("_locale", "de"))
+      .generate("test").should eq "/base/de"
+  end
+
+  def test_generate_localized_routes_preserve_the_good_locale_in_url : Nil
+    routes = ART::RouteCollection.new
+
+    routes.add "foo.en", ART::Route.new "/{_locale}/fork", {"_locale" => "en", "_canonical_route" => "foo"}, {"_locale" => /en/}
+    routes.add "foo.fr", ART::Route.new "/{_locale}/fourchette", {"_locale" => "fr", "_canonical_route" => "foo"}, {"_locale" => /fr/}
+    routes.add "fun.en", ART::Route.new "/fun", {"_locale" => "en", "_canonical_route" => "fun"}, {"_locale" => /en/}
+    routes.add "fun.fr", ART::Route.new "/amusant", {"_locale" => "fr", "_canonical_route" => "fun"}, {"_locale" => /fr/}
+
+    ART.compile routes
+
+    generator = self.generator routes
+    generator.context.set_parameter "_locale", "fr"
+
+    generator.generate("foo").should eq "/base/fr/fourchette"
+    generator.generate("foo.en").should eq "/base/en/fork"
+    generator.generate("foo", {"_locale" => "en"}).should eq "/base/en/fork"
+    generator.generate("foo.fr", {"_locale" => "en"}).should eq "/base/fr/fourchette"
+
+    generator.generate("fun").should eq "/base/amusant"
+    generator.generate("fun.en").should eq "/base/fun"
+    generator.generate("fun", {"_locale" => "en"}).should eq "/base/fun"
+    generator.generate("fun.fr", {"_locale" => "en"}).should eq "/base/amusant"
+  end
+
+  def test_generate_invalid_locale : Nil
+    routes = ART::RouteCollection.new
+    name = "test"
+
+    {"hr" => "/foo", "en" => "/bar"}.each do |locale, path|
+      routes.add "#{name}.#{locale}", ART::Route.new path, {"_locale" => locale, "_canonical_route" => name}, {"_locale" => locale}
+    end
+
+    ART.compile routes
+
+    generator = self.generator routes, default_locale: "fr"
+
+    expect_raises ART::Exceptions::RouteNotFound do
+      generator.generate name
+    end
   end
 
   def test_generate_default_locale : Nil

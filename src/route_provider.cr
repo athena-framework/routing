@@ -117,6 +117,7 @@ class Athena::Routing::RouteProvider
     @@dynamic_routes.clear
     @@route_regexes.clear
     @@conditions.clear
+    @@route_generation_data.clear
     @@compiled = false
     @@routes = nil
   end
