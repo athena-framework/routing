@@ -204,11 +204,15 @@ class Athena::Routing::Generator::URLGenerator
 
     extra_params = params.reject { |key, value| variables.includes?(key) || defaults[key]? == value }
 
+    fragment = defaults["_fragment"]? || ""
+
+    if frag = extra_params.delete("_fragment")
+      fragment = frag.to_s.presence || ""
+    end
+
     unless extra_params.empty?
       query = URI::Params.encode(extra_params.transform_values(&.to_s.as(String)).select! { |key, value| value.presence }).gsub Regex.union(DECODED_QUERY_FRAGMENT_CHARS.keys), DECODED_QUERY_FRAGMENT_CHARS
     end
-
-    fragment = defaults.delete("_fragment").to_s.presence || ""
 
     if query.presence
       url = "#{url}?#{query}"

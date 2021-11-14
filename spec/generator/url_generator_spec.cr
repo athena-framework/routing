@@ -341,10 +341,185 @@ struct URLGeneratorTest < ASPEC::TestCase
       .generate("test", path: "foo/bar%2Fbaz").should eq "/base/dir/foo/bar%2Fbaz/dir2"
   end
 
+  def test_generate_adjacent_variables : Nil
+    generator = self.generator(self.routes(ART::Route.new("{x}{y}{z}.{_format}", {"z" => "default-z", "_format" => "html"}, {"y" => /\d+/})))
+
+    generator.generate("test", x: "foo", y: 123).should eq "/base/foo123"
+    generator.generate("test", x: "foo", y: 123, z: "bar", "_format": "xml").should eq "/base/foo123bar.xml"
+  end
+
+  def test_generate_optional_variable_with_no_real_separator : Nil
+    generator = self.generator(self.routes(ART::Route.new("/get{what}", {"what" => "All"})))
+
+    generator.generate("test").should eq "/base/get"
+    generator.generate("test", what: "Sites").should eq "/base/getSites"
+  end
+
+  def test_generate_required_variable_with_no_real_separator : Nil
+    self
+      .generator(self.routes(ART::Route.new("/get{what}Suffix")))
+      .generate("test", what: "Sites").should eq "/base/getSitesSuffix"
+  end
+
+  def test_generate_default_requirement_of_variable : Nil
+    self
+      .generator(self.routes(ART::Route.new("/{page}.{_format}")))
+      .generate("test", page: "index", "_format": "mobile.html").should eq "/base/index.mobile.html"
+  end
+
+  def test_generate_important_variable : Nil
+    generator = self.generator(self.routes(ART::Route.new("/{page}.{!_format}", {"_format" => "mobile.html"})))
+
+    generator.generate("test", page: "index", "_format": "xml").should eq "/base/index.xml"
+    generator.generate("test", page: "index", "_format": "mobile.html").should eq "/base/index.mobile.html"
+    generator.generate("test", page: "index").should eq "/base/index.mobile.html"
+  end
+
+  def test_generate_important_variable_no_default : Nil
+    generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
+
+    expect_raises ART::Exceptions::MissingRequiredParameters do
+      generator.generate "test", page: "index"
+    end
+  end
+
+  def test_generate_default_requirement_of_variable_disallows_slash : Nil
+    generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", page: "index", "_format": "sl/ash"
+    end
+  end
+
+  def test_generate_default_requirement_of_variable_disallows_next_separator : Nil
+    generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", page: "do.it", "_format": "html"
+    end
+  end
+
+  def test_generate_host_different_than_context : Nil
+    self
+      .generator(self.routes(ART::Route.new("/{name}", host: "{locale}.example.com")))
+      .generate("test", name: "George", locale: "fr").should eq "//fr.example.com/base/George"
+  end
+
+  def test_generate_host_same_as_context : Nil
+    self
+      .generator(self.routes(ART::Route.new("/{name}", host: "{locale}.example.com")), context: ART::RequestContext.new(base_url: "/base", host: "fr.example.com"))
+      .generate("test", name: "George", locale: "fr").should eq "/base/George"
+  end
+
   def test_generate_host_same_as_context_absolute_url : Nil
     self
       .generator(self.routes(ART::Route.new("/{name}", host: "{locale}.example.com")), context: ART::RequestContext.new(base_url: "/base", host: "fr.example.com"))
       .generate("test", {"name" => "George", "locale" => "fr"}, reference_type: :absolute_url).should eq "http://fr.example.com/base/George"
+  end
+
+  def test_url_invalid_parameter_in_host : Nil
+    generator = self.generator self.routes ART::Route.new "/", requirements: {"foo" => /bar/}, host: "{foo}.example.com"
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", foo: "baz"
+    end
+  end
+
+  def test_url_invalid_parameter_in_host_with_default : Nil
+    generator = self.generator self.routes ART::Route.new "/", {"foo" => "bar"}, {"foo" => /bar/}, host: "{foo}.example.com"
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", foo: "baz"
+    end
+  end
+
+  def test_url_invalid_parameter_in_host_with_default_and_matches_default : Nil
+    generator = self.generator self.routes ART::Route.new "/", {"foo" => "baz"}, {"foo" => /bar/}, host: "{foo}.example.com"
+
+    expect_raises ART::Exceptions::InvalidParameter do
+      generator.generate "test", foo: "baz"
+    end
+  end
+
+  def test_url_invalid_parameter_in_host_non_strict_mode : Nil
+    generator = self.generator self.routes ART::Route.new "/", {"foo" => "bar"}, {"foo" => /bar/}, host: "{foo}.example.com"
+    generator.strict_requirements = false
+
+    generator.generate("test", foo: "baz").should be_empty
+  end
+
+  def test_generate_host_is_case_insensitive : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", requirements: {"locale" => /en|de|fr/}, host: "{locale}.example.com")))
+      .generate("test", locale: "EN", reference_type: :network_path).should eq "//EN.example.com/base/"
+  end
+
+  def test_generate_default_host_is_used_when_context_host_is_empty : Nil
+    generator = self.generator(self.routes(ART::Route.new("/path", {"domain" => "my.fallback.host"}, {"domain" => /.+/}, host: "{domain}")))
+    generator.context.host = ""
+
+    generator.generate("test", reference_type: :absolute_url).should eq "http://my.fallback.host/base/path"
+  end
+
+  def test_generate_default_host_is_used_when_context_host_is_empty_and_path_reference_type : Nil
+    generator = self.generator(self.routes(ART::Route.new("/path", {"domain" => "my.fallback.host"}, {"domain" => /.+/}, host: "{domain}")))
+    generator.context.host = ""
+
+    generator.generate("test").should eq "//my.fallback.host/base/path"
+  end
+
+  def test_generate_absolute_url_fallback_to_path_if_host_is_empty_and_scheme_is_https : Nil
+    generator = self.generator self.routes ART::Route.new "/route"
+    generator.context.host = ""
+    generator.context.scheme = "https"
+
+    generator.generate("test", reference_type: :absolute_url).should eq "/base/route"
+  end
+
+  def test_generate_absolute_url_fallback_to_network_if_scheme_is_empty_and_host_is_not : Nil
+    generator = self.generator self.routes ART::Route.new "/route"
+    generator.context.host = "example.com"
+    generator.context.scheme = ""
+
+    generator.generate("test", reference_type: :absolute_url).should eq "//example.com/base/route"
+  end
+
+  def test_generate_absolute_url_fallback_to_path_if_scheme_and_host_are_empty : Nil
+    generator = self.generator self.routes ART::Route.new "/route"
+    generator.context.host = ""
+    generator.context.scheme = ""
+
+    generator.generate("test", reference_type: :absolute_url).should eq "/base/route"
+  end
+
+  def test_generate_absolute_url_non_http_scheme_and_empty_host : Nil
+    generator = self.generator self.routes ART::Route.new "/route", schemes: "file"
+    generator.context.base_url = ""
+    generator.context.host = ""
+
+    generator.generate("test", reference_type: :absolute_url).should eq "file:///route"
+  end
+
+  # TODO: Test network path
+  # TODO: Test relative path
+
+  def test_generate_with_fragment : Nil
+    generator = self.generator(self.routes(ART::Route.new("/")))
+
+    generator.generate("test", "_fragment": "frag ment").should eq "/base/#frag%20ment"
+    generator.generate("test", "_fragment": "0").should eq "/base/#0"
+  end
+
+  def test_generate_with_fragment_does_not_escape_valid_chars : Nil
+    self
+      .generator(self.routes(ART::Route.new("/")))
+      .generate("test", "_fragment": "?/").should eq "/base/#?/"
+  end
+
+  def test_generate_with_fragment_via_default : Nil
+    self
+      .generator(self.routes(ART::Route.new("/", {"_fragment" => "fragment"})))
+      .generate("test").should eq "/base/#fragment"
   end
 
   private def generator(routes : ART::RouteCollection, *, context : ART::RequestContext? = nil, default_locale : String? = nil) : ART::Generator::URLGenerator
