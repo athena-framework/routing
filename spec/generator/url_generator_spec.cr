@@ -1,6 +1,5 @@
 require "../spec_helper"
 
-@[ASPEC::TestCase::Focus]
 struct URLGeneratorTest < ASPEC::TestCase
   def tear_down : Nil
     ART::RouteProvider.reset

@@ -81,6 +81,7 @@ class Athena::Routing::Generator::URLGenerator
     self.do_generate variables, defaults, requirements, tokens, params, route, reference_type, host_tokens, schemes
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def do_generate(
     variables : Set(String),
     defaults : Hash(String, String?),
@@ -215,7 +216,7 @@ class Athena::Routing::Generator::URLGenerator
     end
 
     unless extra_params.empty?
-      query = URI::Params.encode(extra_params.transform_values(&.to_s.as(String)).select! { |key, value| value.presence }).gsub Regex.union(DECODED_QUERY_FRAGMENT_CHARS.keys), DECODED_QUERY_FRAGMENT_CHARS
+      query = URI::Params.encode(extra_params.transform_values(&.to_s.as(String)).select! { |_, value| value.presence }).gsub Regex.union(DECODED_QUERY_FRAGMENT_CHARS.keys), DECODED_QUERY_FRAGMENT_CHARS
     end
 
     if query.presence
