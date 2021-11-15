@@ -500,8 +500,46 @@ struct URLGeneratorTest < ASPEC::TestCase
     generator.generate("test", reference_type: :absolute_url).should eq "file:///route"
   end
 
-  # TODO: Test network path
-  # TODO: Test relative path
+  def test_generate_network_paths : Nil
+    routes = self.routes ART::Route.new "/{name}", host: "{locale}.example.com", schemes: "http"
+
+    self
+      .generator(routes)
+      .generate("test", name: "George", locale: "de", reference_type: :network_path).should eq "//de.example.com/base/George"
+
+    self
+      .generator(routes, context: ART::RequestContext.new base_url: "/base", host: "de.example.com")
+      .generate("test", name: "George", locale: "de", query: "string", reference_type: :network_path).should eq "//de.example.com/base/George?query=string"
+
+    self
+      .generator(routes, context: ART::RequestContext.new base_url: "/base", scheme: "https")
+      .generate("test", name: "George", locale: "de", reference_type: :network_path).should eq "http://de.example.com/base/George"
+
+    self
+      .generator(routes)
+      .generate("test", name: "George", locale: "de", reference_type: :absolute_url).should eq "http://de.example.com/base/George"
+  end
+
+  def test_generate_relative_path : Nil
+    routes = ART::RouteCollection.new
+    routes.add "article", ART::Route.new "/{author}/{article}/"
+    routes.add "comments", ART::Route.new "/{author}/{article}/comments"
+    routes.add "host", ART::Route.new "/{article}", host: "{author}.example.com"
+    routes.add "scheme", ART::Route.new "/{author}/blog", schemes: "https"
+    routes.add "unrelated", ART::Route.new "/about"
+
+    ART.compile routes
+
+    generator = self.generator routes, context: ART::RequestContext.new base_url: "/base", host: "example.com", path: "/George/athena-is-great"
+
+    generator.generate("comments", author: "George", article: "athena-is-great", reference_type: :relative_path).should eq "comments"
+    generator.generate("comments", author: "George", article: "athena-is-great", page: 2, reference_type: :relative_path).should eq "comments?page=2"
+    generator.generate("article", author: "George", article: "crystal-is-great", reference_type: :relative_path).should eq "../crystal-is-great"
+    generator.generate("article", author: "foo", article: "shards-is-great", reference_type: :relative_path).should eq "../../foo/shards-is-great"
+    generator.generate("host", author: "George", article: "crystal-is-great", reference_type: :relative_path).should eq "//George.example.com/base/crystal-is-great"
+    generator.generate("scheme", author: "George", reference_type: :relative_path).should eq "https://example.com/base/George/blog"
+    generator.generate("unrelated", reference_type: :relative_path).should eq "../../about"
+  end
 
   def test_generate_with_fragment : Nil
     generator = self.generator(self.routes(ART::Route.new("/")))
@@ -520,6 +558,22 @@ struct URLGeneratorTest < ASPEC::TestCase
     self
       .generator(self.routes(ART::Route.new("/", {"_fragment" => "fragment"})))
       .generate("test").should eq "/base/#fragment"
+  end
+
+  @[DataProvider("look_around_provider")]
+  def test_generate_look_around_requirements_in_path(expected : String, path : String, requirement : Regex) : Nil
+    self
+      .generator(self.routes(ART::Route.new(path, requirements: {"foo" => requirement, "baz" => /.+?/})))
+      .generate("test", foo: "a/b", baz: "c/d/e").should eq expected
+  end
+
+  def look_around_provider : Tuple
+    {
+      {"/base/a/b/b%28ar/c/d/e", "/{foo}/b(ar/{baz}", /.+(?=\/b\(ar\/)/},
+      {"/base/a/b/bar/c/d/e", "/{foo}/bar/{baz}", /.+(?!$)/},
+      {"/base/bar/a/b/bam/c/d/e", "/bar/{foo}/bam/{baz}", /(?<=\/bar\/).+/},
+      {"/base/bar/a/b/bam/c/d/e", "/bar/{foo}/bam/{baz}", /(?<!^).+/},
+    }
   end
 
   private def generator(routes : ART::RouteCollection, *, context : ART::RequestContext? = nil, default_locale : String? = nil) : ART::Generator::URLGenerator

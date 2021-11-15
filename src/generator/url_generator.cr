@@ -111,7 +111,7 @@ class Athena::Routing::Generator::URLGenerator
         important = token.important?
 
         if !optional || important || !defaults.has_key?(var_name) || (!merged_params[var_name]?.nil? && merged_params[var_name].to_s != defaults[var_name].to_s)
-          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
+          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\]+|\\.|\((?1)\))*)\)/, ""}$/i)
             if @strict_requirements
               raise ART::Exceptions::InvalidParameter.new message % {var_name, name, r, merged_params[var_name]}
             end
@@ -159,7 +159,7 @@ class Athena::Routing::Generator::URLGenerator
       host_tokens.each do |token|
         case token.type
         in .variable?
-          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\\\]+|\\\\.|\((?1)\))*)\)/, ""}$/i)
+          if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\]+|\\.|\((?1)\))*)\)/, ""}$/i)
             if @strict_requirements
               raise ART::Exceptions::InvalidParameter.new message % {token.var_name, name, r, merged_params[token.var_name]}
             end
@@ -197,7 +197,11 @@ class Athena::Routing::Generator::URLGenerator
     end
 
     if reference_type.relative_path?
-      raise NotImplementedError.new("Relative path reference type is currently not supported.")
+      url = if @context.path == url
+              ""
+            else
+              Path.new(url).relative_to(@context.path).to_s
+            end
     else
       url = "#{scheme_authority}#{@context.base_url}#{url}"
     end
