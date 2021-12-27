@@ -25,10 +25,10 @@ class Athena::Routing::Matcher::URLMatcher
     end
 
     unless allow.empty?
-      raise ART::Exceptions::MethodNotAllowed.new allow
+      raise ART::Exception::MethodNotAllowed.new allow
     end
 
-    raise ART::Exceptions::ResourceNotFound.new "No routes found for '#{path}'."
+    raise ART::Exception::ResourceNotFound.new "No routes found for '#{path}'."
   end
 
   # ameba:disable Metrics/CyclomaticComplexity
@@ -148,7 +148,7 @@ class Athena::Routing::Matcher::URLMatcher
     end
 
     if "/" == path && allow.empty? && allow_schemes.empty?
-      raise ART::Exceptions::NoConfiguration.new
+      raise ART::Exception::NoConfiguration.new
     end
 
     nil

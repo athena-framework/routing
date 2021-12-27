@@ -65,7 +65,7 @@ class Athena::Routing::Generator::URLGenerator
     end
 
     unless (generation_data = ART::RouteProvider.route_generation_data[route]?)
-      raise ART::Exceptions::RouteNotFound.new "No route with the name '#{route}' exists."
+      raise ART::Exception::RouteNotFound.new "No route with the name '#{route}' exists."
     end
 
     variables, defaults, requirements, tokens, host_tokens, schemes = generation_data
@@ -82,6 +82,8 @@ class Athena::Routing::Generator::URLGenerator
   end
 
   # ameba:disable Metrics/CyclomaticComplexity
+  #
+  # OPTIMIZE: We could probably make use of `URI` for a lot of this stuff.
   private def do_generate(
     variables : Set(String),
     defaults : Hash(String, String?),
@@ -99,7 +101,7 @@ class Athena::Routing::Generator::URLGenerator
     merged_params.merge! params
 
     unless (missing_params = variables - merged_params.keys).empty?
-      raise ART::Exceptions::MissingRequiredParameters.new %(Cannot generate URL for route '#{name}'. Missing required parameters: #{missing_params.join(", ") { |p| "'#{p}'" }}.)
+      raise ART::Exception::MissingRequiredParameters.new %(Cannot generate URL for route '#{name}'. Missing required parameters: #{missing_params.join(", ") { |p| "'#{p}'" }}.)
     end
 
     url = ""
@@ -114,7 +116,7 @@ class Athena::Routing::Generator::URLGenerator
         if !optional || important || !defaults.has_key?(var_name) || (!merged_params[var_name]?.nil? && merged_params[var_name].to_s != defaults[var_name].to_s)
           if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\]+|\\.|\((?1)\))*)\)/, ""}$/i)
             if @strict_requirements
-              raise ART::Exceptions::InvalidParameter.new message % {var_name, name, r, merged_params[var_name]}
+              raise ART::Exception::InvalidParameter.new message % {var_name, name, r, merged_params[var_name]}
             end
 
             # TOOD: Add logger integration
@@ -162,7 +164,7 @@ class Athena::Routing::Generator::URLGenerator
         in .variable?
           if !@strict_requirements.nil? && (r = token.regex) && !(merged_params[token.var_name]? || "").to_s.matches?(/^#{r.source.gsub /\(\?(?:=|<=|!|<!)((?:[^()\\]+|\\.|\((?1)\))*)\)/, ""}$/i)
             if @strict_requirements
-              raise ART::Exceptions::InvalidParameter.new message % {token.var_name, name, r, merged_params[token.var_name]}
+              raise ART::Exception::InvalidParameter.new message % {token.var_name, name, r, merged_params[token.var_name]}
             end
 
             # TOOD: Add logger integration

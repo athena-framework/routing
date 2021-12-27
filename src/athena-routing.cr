@@ -10,7 +10,7 @@ require "./route_collection"
 require "./route_compiler"
 require "./route_provider"
 
-require "./exceptions/*"
+require "./exception/*"
 require "./generator/*"
 require "./matcher/*"
 
@@ -25,6 +25,8 @@ module Athena::Routing
   {% else %}
     alias Request = HTTP::Request
   {% end %}
+
+  module Exception; end
 
   def self.compile(routes : ART::RouteCollection) : Nil
     ART::RouteProvider.compile routes

@@ -18,7 +18,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/foo", methods: "post"
     end
 
-    ex = expect_raises ART::Exceptions::MethodNotAllowed do
+    ex = expect_raises ART::Exception::MethodNotAllowed do
       self.get_matcher(routes).match "/foo"
     end
 
@@ -30,7 +30,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/", methods: "get"
     end
 
-    ex = expect_raises ART::Exceptions::MethodNotAllowed do
+    ex = expect_raises ART::Exception::MethodNotAllowed do
       self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/"
     end
 
@@ -51,7 +51,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo2", ART::Route.new "/foo", methods: {"PUT", "DELETE"}
     end
 
-    ex = expect_raises ART::Exceptions::MethodNotAllowed do
+    ex = expect_raises ART::Exception::MethodNotAllowed do
       self.get_matcher(routes).match "/foo"
     end
 
@@ -63,7 +63,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/foo/{bar}"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/no-match"
     end
 
@@ -85,7 +85,7 @@ struct URLMatcherTest < ASPEC::TestCase
 
     self.get_matcher(routes).match("/foo").should eq({"_route" => "foo"})
 
-    expect_raises ART::Exceptions::MethodNotAllowed do
+    expect_raises ART::Exception::MethodNotAllowed do
       self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo"
     end
 
@@ -165,7 +165,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "index", ART::Route.new "/index.{!_format}", {"_format" => "xml"}
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/index"
     end
   end
@@ -183,7 +183,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/foo"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo%0a"
     end
   end
@@ -220,7 +220,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/{bar}"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/"
     end
   end
@@ -256,7 +256,7 @@ struct URLMatcherTest < ASPEC::TestCase
 
     self.get_matcher(routes).match("/foo1").should eq({"_route" => "foo"})
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo"
     end
   end
@@ -280,7 +280,7 @@ struct URLMatcherTest < ASPEC::TestCase
     matcher.match("/wwwwwxyZZZ").should eq({"_route" => "test", "_format" => "html", "w" => "wwwww", "x" => "x", "y" => "y", "z" => "ZZZ"})
     matcher.match("/wwwwwxy").should eq({"_route" => "test", "_format" => "html", "w" => "wwwww", "x" => "x", "y" => "y", "z" => "default-z"})
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       matcher.match "/wxy.html"
     end
   end
@@ -317,7 +317,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/{page}.{_format}"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/index.sl/ash"
     end
   end
@@ -327,7 +327,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/{page}.{_format}", requirements: {"_format" => /html|xml/}
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/do.t.html"
     end
   end
@@ -337,7 +337,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo/"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo"
     end
   end
@@ -347,7 +347,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo/"
     end
   end
@@ -357,7 +357,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo/"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo"
     end
   end
@@ -367,7 +367,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo/"
     end
   end
@@ -377,7 +377,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo", schemes: "https"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo"
     end
   end
@@ -387,7 +387,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "test", ART::Route.new "/foo", schemes: "https"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes, ART::RequestContext.new method: "POST").match "/foo"
     end
   end
@@ -411,7 +411,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", route
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/foo"
     end
   end
@@ -618,7 +618,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/foo/{foo}", host: "{locale}.example.com"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes, ART::RequestContext.new host: "example.com").match "/foo/bar"
     end
   end
@@ -628,7 +628,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/{locale}", requirements: {"locale" => /EN|FR|DE/}
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/en"
     end
   end
@@ -642,7 +642,7 @@ struct URLMatcherTest < ASPEC::TestCase
   end
 
   def test_match_no_configuration : Nil
-    expect_raises ART::Exceptions::NoConfiguration do
+    expect_raises ART::Exception::NoConfiguration do
       self.get_matcher(ART::RouteCollection.new).match "/"
     end
   end
@@ -679,7 +679,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "foo", ART::Route.new "/", schemes: "https", methods: "POST"
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/"
     end
   end
@@ -810,7 +810,7 @@ struct URLMatcherTest < ASPEC::TestCase
       add "a", ART::Route.new "/fr-fr/{a}", {"a" => "aaa"}, {"a" => /.+/}
     end
 
-    expect_raises ART::Exceptions::ResourceNotFound do
+    expect_raises ART::Exception::ResourceNotFound do
       self.get_matcher(routes).match "/fr-fr/"
     end
   end

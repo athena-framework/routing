@@ -156,26 +156,26 @@ struct RouteCompilerTest < ASPEC::TestCase
   end
 
   def test_route_with_same_variable_twice : Nil
-    expect_raises ART::Exceptions::Logic, "Route pattern '/{foo}/{foo}' cannot reference variable name 'foo' more than once." do
+    expect_raises ART::Exception::InvalidArgument, "Route pattern '/{foo}/{foo}' cannot reference variable name 'foo' more than once." do
       ART::Route.new("/{foo}/{foo}").compile
     end
   end
 
   def test_route_with_fragment_as_path_parameter : Nil
-    expect_raises ART::Exceptions::Logic, "Route pattern '/{_fragment}' cannot contain '_fragment' as a path parameter." do
+    expect_raises ART::Exception::InvalidArgument, "Route pattern '/{_fragment}' cannot contain '_fragment' as a path parameter." do
       ART::Route.new("/{_fragment}").compile
     end
   end
 
   def test_route_with_too_long_parameter_name : Nil
-    expect_raises ART::Exceptions::Logic, "Variable name 'abcdefghijklmnopqrstuvqxyz0123456789' cannot be longer than 32 characters in route pattern '/{abcdefghijklmnopqrstuvqxyz0123456789}'." do
+    expect_raises ART::Exception::InvalidArgument, "Variable name 'abcdefghijklmnopqrstuvqxyz0123456789' cannot be longer than 32 characters in route pattern '/{abcdefghijklmnopqrstuvqxyz0123456789}'." do
       ART::Route.new("/{abcdefghijklmnopqrstuvqxyz0123456789}").compile
     end
   end
 
   @[DataProvider("names_starting_with_digit_provider")]
   def test_route_with_variable_name_starting_with_digit(name : String) : Nil
-    expect_raises ART::Exceptions::Logic, "Variable name '#{name}' cannot start with a digit in route pattern '/{#{name}}'." do
+    expect_raises ART::Exception::InvalidArgument, "Variable name '#{name}' cannot start with a digit in route pattern '/{#{name}}'." do
       ART::Route.new("/{#{name}}").compile
     end
   end

@@ -50,7 +50,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_nil_parameter_required : Nil
     generator = self.generator self.routes ART::Route.new "/test/{foo}/bar", {"foo" => nil}
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test"
     end
   end
@@ -130,7 +130,7 @@ struct URLGeneratorTest < ASPEC::TestCase
 
     generator = self.generator routes, default_locale: "fr"
 
-    expect_raises ART::Exceptions::RouteNotFound do
+    expect_raises ART::Exception::RouteNotFound do
       generator.generate name
     end
   end
@@ -183,7 +183,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_no_routes : Nil
     generator = self.generator self.routes ART::Route.new "/test"
 
-    expect_raises ART::Exceptions::RouteNotFound do
+    expect_raises ART::Exception::RouteNotFound do
       generator.generate("foo", reference_type: :absolute_url)
     end
   end
@@ -191,7 +191,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_missing_required_param : Nil
     generator = self.generator self.routes ART::Route.new "/test/{foo}"
 
-    expect_raises ART::Exceptions::MissingRequiredParameters, %(Cannot generate URL for route 'test'. Missing required parameters: 'foo'.) do
+    expect_raises ART::Exception::MissingRequiredParameters, %(Cannot generate URL for route 'test'. Missing required parameters: 'foo'.) do
       generator.generate("test", reference_type: :absolute_url)
     end
   end
@@ -199,7 +199,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_invalid_optional_param : Nil
     generator = self.generator self.routes ART::Route.new "/test/{foo}", {"foo" => "1"}, {"foo" => /\d+/}
 
-    expect_raises ART::Exceptions::InvalidParameter, "Parameter 'foo' for route 'test' must match '(?-imsx:\\d+)' (got 'bar') to generate the corresponding URL." do
+    expect_raises ART::Exception::InvalidParameter, "Parameter 'foo' for route 'test' must match '(?-imsx:\\d+)' (got 'bar') to generate the corresponding URL." do
       generator.generate("test", {"foo" => "bar"}, :absolute_url)
     end
   end
@@ -207,7 +207,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_invalid_param : Nil
     generator = self.generator self.routes ART::Route.new "/test/{foo}", requirements: {"foo" => /1|2/}
 
-    expect_raises ART::Exceptions::InvalidParameter, "Parameter 'foo' for route 'test' must match '(?-imsx:1|2)' (got '0') to generate the corresponding URL." do
+    expect_raises ART::Exception::InvalidParameter, "Parameter 'foo' for route 'test' must match '(?-imsx:1|2)' (got '0') to generate the corresponding URL." do
       generator.generate("test", {"foo" => "0"}, :absolute_url)
     end
   end
@@ -229,7 +229,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_invalid_required_param : Nil
     generator = self.generator self.routes ART::Route.new "/test/{foo}", requirements: {"foo" => /1|2/}
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate("test", {"foo" => "0"}, :absolute_url)
     end
   end
@@ -237,7 +237,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_required_param_empty_string : Nil
     generator = self.generator self.routes ART::Route.new "/{slug}", requirements: {"slug" => /.+/}
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", {"slug" => ""}
     end
   end
@@ -377,7 +377,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_important_variable_no_default : Nil
     generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
 
-    expect_raises ART::Exceptions::MissingRequiredParameters do
+    expect_raises ART::Exception::MissingRequiredParameters do
       generator.generate "test", page: "index"
     end
   end
@@ -385,7 +385,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_default_requirement_of_variable_disallows_slash : Nil
     generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", page: "index", "_format": "sl/ash"
     end
   end
@@ -393,7 +393,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_generate_default_requirement_of_variable_disallows_next_separator : Nil
     generator = self.generator self.routes ART::Route.new "/{page}.{!_format}"
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", page: "do.it", "_format": "html"
     end
   end
@@ -419,7 +419,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_url_invalid_parameter_in_host : Nil
     generator = self.generator self.routes ART::Route.new "/", requirements: {"foo" => /bar/}, host: "{foo}.example.com"
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", foo: "baz"
     end
   end
@@ -427,7 +427,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_url_invalid_parameter_in_host_with_default : Nil
     generator = self.generator self.routes ART::Route.new "/", {"foo" => "bar"}, {"foo" => /bar/}, host: "{foo}.example.com"
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", foo: "baz"
     end
   end
@@ -435,7 +435,7 @@ struct URLGeneratorTest < ASPEC::TestCase
   def test_url_invalid_parameter_in_host_with_default_and_matches_default : Nil
     generator = self.generator self.routes ART::Route.new "/", {"foo" => "baz"}, {"foo" => /bar/}, host: "{foo}.example.com"
 
-    expect_raises ART::Exceptions::InvalidParameter do
+    expect_raises ART::Exception::InvalidParameter do
       generator.generate "test", foo: "baz"
     end
   end

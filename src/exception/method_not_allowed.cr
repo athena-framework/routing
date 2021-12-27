@@ -1,6 +1,6 @@
-require "./routing_exception"
+class Athena::Routing::Exception::MethodNotAllowed < RuntimeError
+  include Athena::Routing::Exception
 
-class Athena::Routing::Exceptions::MethodNotAllowed < Athena::Routing::Exceptions::RoutingException
   getter allowed_methods : Array(String)
 
   def initialize(allowed_methods : Enumerable(String), message : String? = nil, cause : ::Exception? = nil)
