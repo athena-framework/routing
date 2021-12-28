@@ -31,6 +31,7 @@ class Athena::Routing::Route
   end
 
   def_equals @path, @defaults, @requirements, @host, @methods, @schemes
+  def_clone
 
   def condition(&@condition : ART::RequestContext, ART::Request -> Bool) : self
     self
@@ -63,8 +64,10 @@ class Athena::Routing::Route
 
   def methods=(methods : String | Enumerable(String)) : self
     methods = methods.is_a?(String) ? {methods} : methods
-    @methods ||= Set(String).new
-    methods.each { |m| @methods.not_nil! << m.upcase }
+
+    methods_set = (@methods ||= Set(String).new)
+    methods_set.clear
+    methods.each { |m| methods_set << m.upcase }
 
     @compiled_route = nil
 

@@ -26,6 +26,8 @@ module Athena::Routing::RouteCompiler
       @important : Bool = false
     )
     end
+
+    def_clone
   end
 
   private record CompiledPattern,

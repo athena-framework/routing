@@ -22,4 +22,6 @@ struct Athena::Routing::CompiledRoute
     @variables : Set(String) = Set(String).new
   )
   end
+
+  def_clone
 end

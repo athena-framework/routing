@@ -81,9 +81,9 @@ class Athena::Routing::Generator::URLGenerator
     self.do_generate variables, defaults, requirements, tokens, params, route, reference_type, host_tokens, schemes
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  #
   # OPTIMIZE: We could probably make use of `URI` for a lot of this stuff.
+  #
+  # ameba:disable Metrics/CyclomaticComplexity
   private def do_generate(
     variables : Set(String),
     defaults : Hash(String, String?),
