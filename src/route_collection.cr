@@ -149,23 +149,13 @@ class Athena::Routing::RouteCollection
   # Returns the `ART::Action` with the provided *name*.
   #
   # Raises a `ART::Exception::InvalidArgument` if a route with the provided *name* does not exist.
-  def get(name : String) : ART::Route
+  def [](name : String) : ART::Route
     self.routes.fetch(name) { raise ART::Exception::InvalidArgument.new "Unknown route: '#{name}'." }
   end
 
-  # :ditto:
-  def [](name : String) : ART::Route
-    self.get name
-  end
-
   # Returns the `ART::Action` with the provided *name*, or `nil` if it does not exist.
-  def get?(name : String) : ART::Route?
-    self.routes[name]?
-  end
-
-  # :ditto:
   def []?(name : String) : ART::Route?
-    self.get? name
+    self.routes[name]?
   end
 
   def size : Int

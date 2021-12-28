@@ -6,17 +6,11 @@ struct RouteCollectionTest < ASPEC::TestCase
     route = ART::Route.new "/foo"
     collection.add "foo", route
     collection.routes.should eq({"foo" => route})
-    collection.get("foo").should be route
     collection["foo"].should be route
-    collection.get?("foo").should be route
+    collection["foo"].should be route
     collection["foo"]?.should be route
 
-    collection.get?("bar").should be_nil
     collection["bar"]?.should be_nil
-
-    expect_raises ART::Exception::InvalidArgument, "Unknown route: 'bar'." do
-      collection.get "bar"
-    end
 
     expect_raises ART::Exception::InvalidArgument, "Unknown route: 'bar'." do
       collection["bar"]
@@ -31,7 +25,7 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add "foo", route1
     collection.add "foo", route2
 
-    collection.get("foo").should be route2
+    collection["foo"].should be route2
   end
 
   def test_deep_overridden_rotue : Nil
@@ -47,8 +41,8 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection1.add collection2
     collection.add collection1
 
-    collection1.get("foo").path.should eq "/foo2"
-    collection.get("foo").path.should eq "/foo2"
+    collection1["foo"].path.should eq "/foo2"
+    collection["foo"].path.should eq "/foo2"
   end
 
   def test_size : Nil
@@ -88,8 +82,8 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add collection1
 
     collection.add_defaults({"placeholder" => "new-default"})
-    collection.get("foo").defaults.should eq({"placeholder" => "new-default"})
-    collection.get("bar").defaults.should eq({"placeholder" => "new-default", "foo" => "bar"})
+    collection["foo"].defaults.should eq({"placeholder" => "new-default"})
+    collection["bar"].defaults.should eq({"placeholder" => "new-default", "foo" => "bar"})
   end
 
   def test_add_requirements : Nil
@@ -101,8 +95,8 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add collection1
 
     collection.add_requirements({"placeholder" => /\d+/})
-    collection.get("foo").requirements.should eq({"placeholder" => /\d+/})
-    collection.get("bar").requirements.should eq({"placeholder" => /\d+/})
+    collection["foo"].requirements.should eq({"placeholder" => /\d+/})
+    collection["bar"].requirements.should eq({"placeholder" => /\d+/})
   end
 
   def test_add_prefix : Nil
@@ -115,25 +109,25 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add collection1
     collection.add_prefix " / "
 
-    collection.get("foo").path.should eq "/foo"
+    collection["foo"].path.should eq "/foo"
 
     collection.add_prefix "/{admin}", {"admin" => "admin"}, {"admin" => /\d+/}
 
-    collection.get("foo").path.should eq "/{admin}/foo"
-    collection.get("bar").path.should eq "/{admin}/bar"
-    collection.get("foo").defaults.should eq({"admin" => "admin"})
-    collection.get("bar").defaults.should eq({"admin" => "admin"})
-    collection.get("foo").requirements.should eq({"admin" => /\d+/})
-    collection.get("bar").requirements.should eq({"admin" => /\d+/})
+    collection["foo"].path.should eq "/{admin}/foo"
+    collection["bar"].path.should eq "/{admin}/bar"
+    collection["foo"].defaults.should eq({"admin" => "admin"})
+    collection["bar"].defaults.should eq({"admin" => "admin"})
+    collection["foo"].requirements.should eq({"admin" => /\d+/})
+    collection["bar"].requirements.should eq({"admin" => /\d+/})
 
     collection.add_prefix "0"
 
-    collection.get("foo").path.should eq "/0/{admin}/foo"
+    collection["foo"].path.should eq "/0/{admin}/foo"
 
     collection.add_prefix "/ /"
 
-    collection.get("foo").path.should eq "/ /0/{admin}/foo"
-    collection.get("bar").path.should eq "/ /0/{admin}/bar"
+    collection["foo"].path.should eq "/ /0/{admin}/foo"
+    collection["bar"].path.should eq "/ /0/{admin}/bar"
   end
 
   def test_add_prefix_overrides_requirements : Nil
@@ -142,8 +136,8 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add "bar", ART::Route.new "/bar.{_format}", requirements: {"_format" => "json"}
     collection.add_prefix "/admin", requirements: {"_format" => "html"}
 
-    collection.get("foo").requirement("_format").should eq /html/
-    collection.get("bar").requirement("_format").should eq /html/
+    collection["foo"].requirement("_format").should eq /html/
+    collection["bar"].requirement("_format").should eq /html/
   end
 
   def test_unique_route_with_given_name : Nil

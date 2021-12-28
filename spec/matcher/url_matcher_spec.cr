@@ -450,7 +450,7 @@ struct URLMatcherTest < ASPEC::TestCase
         add "bar", ART::Route.new "/bar"
         add_prefix "/prefix"
 
-        get("bar").path = "/new"
+        itself["bar"].path = "/new"
       end
 
       add sub_routes
