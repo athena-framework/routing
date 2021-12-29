@@ -20,6 +20,44 @@ alias ART = Athena::Routing
 
 alias ARTA = ART::Annotations
 
+# Athena's Routing component, `ART` for short, allows mapping HTTP requests to particular `ART::Route`s.
+# This component is primarily intended to be used as a basis for a routing implementation for a framework, handling the majority of the heavy lifting.
+#
+# The routing component supports various ways to control which routes are matched, including:
+#
+# * Regex patterns
+# * [host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header values
+# * HTTP method/scheme
+# * Request format/locale
+# * Dynamic callbacks
+#
+# Using the routing component involves adding `ART::Route` instances to an `ART::RouteCollection`.
+# The collection is then compiled via `ART.compile`.
+# An `ART::Matcher::URLMatcherInterface` or `ART::Matcher::RequestMatcherInterface` could then be used to determine which route matches a given path or `ART::Request`.
+# For example:
+#
+# ```
+# # Create a new route collection and add a route with a single parameter to it.
+# routes = ART::RouteCollection.new
+# routes.add "blog_show", ART::Route.new "/blog/{slug}"
+#
+# # Compile the routes.
+# ART.compile routes
+#
+# # Represents the request in an agnostic data format.
+# # In practice this would be created from the current `ART::Request`.
+# context = ART::RequestContext.new
+#
+# # Match a request by path.
+# matcher = ART::Matcher::URLMatcher.new context
+# matcher.match "/blog/foo-bar" # => {"_route" => "blog_show", "slug" => "foo-bar"}
+#
+# # Generating routes based on route name and parameters is also possible.
+# generator = ART::Generator::URLGenerator.new context
+# generator.generate "blog_show", slug: "bar-baz", source: "Crystal" # => "/blog/bar-baz?source=Crystal"
+# ```
+#
+# See the related types for more detailed information.
 module Athena::Routing
   VERSION = "0.1.0"
 

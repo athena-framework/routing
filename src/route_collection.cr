@@ -1,3 +1,8 @@
+# #### Priority Parameter
+#
+# When determining which route should match, the first matching route will win.
+# For example, if two routes were added with variable parameters in the same location, the first one that was added would match regardless of what their requirements are.
+# In most cases this will not be a problem, but in some cases you may need to ensure a particular route is checked first.
 class Athena::Routing::RouteCollection
   include Enumerable({String, Athena::Routing::Route})
   include Iterable({String, Athena::Routing::Route})

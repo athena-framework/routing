@@ -1,5 +1,5 @@
 # Contains all the `Athena::Routing` based annotations.
-# See each annotation for more information.
+# See `ARTA::Route` for more information.
 #
 # NOTE: These are primarily to define a common type/documentation to use in custom implementations.
 # As of now, they are not leveraged internally, but a future iteration could provide a built in way to resolve them into an `ART::RouteCollection`.
@@ -21,21 +21,22 @@ module Athena::Routing::Annotations
 
   # Same as `ARTA::Route`, but only matches the `POST` method.
   annotation Post; end
-  annotation Prefix; end
 
   # Same as `ARTA::Route`, but only matches the `PUT` method.
   annotation Put; end
 
   # Annotation representation of an `ART::Route`.
-  # Most commonly this will be applied to a method to define it as the controller for the related route.
-  # But custom implementations may support alternate APIs.
+  # Most commonly this will be applied to a method to define it as the controller for the related route,
+  # but could also be applied to a controller class to apply defaults to all other `ARTA::Route` within it.
+  # Custom implementations may support alternate APIs.
+  # See `ART::Route` for more information.
   #
   # ## Configuration
   #
   # Various fields can be used within this annotation to control how the route is created.
   # All fields are optional unless otherwise noted.
   #
-  # WARNING: However, not all fields may be supported by the underlying implementation.
+  # WARNING: Not all fields may be supported by the underlying implementation.
   #
   # #### path
   #
@@ -65,19 +66,52 @@ module Athena::Routing::Annotations
   #
   # **Type:** `String | Regex`
   #
-  # The path of the route.
-
-  # * name
-  # * requirements
-  # * defaults
-  # * host
-  # * methods
-  # * schemes
-  # * condition
-  # * priority
-  # * locale
-  # * format
-  # * stateless
+  # Require the [host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header to match this value in order for the route to match.
+  #
+  # #### methods
+  #
+  # **Type:** `String | Enumerable(String)`
+  #
+  # A whitelist of the HTTP methods this route supports.
+  #
+  # #### schemes
+  #
+  # **Type:** `String | Enumerable(String)`
+  #
+  # A whitelist of the HTTP schemes this route supports.
+  #
+  # #### condition
+  #
+  # **Type:** `ART::Route::Condition`
+  #
+  # A callback used to dynamically determine if the request matches the route.
+  #
+  # #### priority
+  #
+  # **Type:** `Int32`
+  #
+  # A value used to control the order the routes are registered in.
+  # A higher value means that route will be registered earlier.
+  #
+  # #### locale
+  #
+  # **Type:** `String`
+  #
+  # Allows setting the locale this route supports.
+  # Sets the special `_locale` route parameter.
+  #
+  # #### format
+  #
+  # **Type:** `String`
+  #
+  # Allows setting the format this route supports.
+  # Sets the special `_format` route parameter.
+  #
+  # #### stateless
+  #
+  # **Type:** `Bool`
+  #
+  # If the route should be cached or not.
   annotation Route; end
 
   # Same as `ARTA::Route`, but only matches the `UNLINK` method.

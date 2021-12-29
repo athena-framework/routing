@@ -1,10 +1,180 @@
-# TODO: How to store a reference to the "Controller"
-# in quotes because it technically doesn't need to be an ART::Controller.
+# Provides an object-oriented way to represent an HTTP route,
+# including the path, methods, schemes, host, and/or conditions required for it to match.
+#
+# Ultimately, `ART::Route`s are compiled into `ART::CompiledRoute` that represents an immutable
+# snapshot of a route, along with `ART::CompiledRoute::Token`s representing each route parameter.
+#
+# By default, a route is very liberal in regards to what it matches.
+# E.g. Matching anything that matches the `path`, but with any HTTP method and any scheme.
+# The `methods` and `schemes` properties can be used to restrict with methods/schemes the route can handle.
+#
+# ```
+# # This route will only handle `https` `POST` requests to `/`.
+# route1 = ART::Route.new "/path", schemes: "https", methods: "POST"
+#
+# # This route will handle `http` or `ftp` `GET`/`PATCH` requests to `/path`.
+# route2 = ART::Route.new "/path", schemes: {"https", "ftp"}, methods: {"GET", "PATCH"}
+# ```
+#
+# ## Expressions
+#
+# In some cases you may want to match a route using arbitrary dynamic runtime logic.
+# An example use case for this could be checking a request header, attribute,
+# or anything else on the underlying `ART::RequestContext` and/or `ART::Request` instance.
+# The `condition` property can be used for just this purpose:
+#
+# ```
+# route = ART::Route.new "/contact"
+# route.condition do |context, request|
+#   request.headers["user-agent"].includes? "Firefox"
+# end
+# ```
+#
+# This route would only match requests whose `user-agent` header includes `Firefox`.
+# Be sure to also handle cases where headers may not be set.
+#
+# WARNING: Route conditions are _NOT_ taken into consideration when generating routes via an `ART::Generator::URLGeneratorInterface`.
+#
+# ## Parameters
+#
+# Route parameters represent variable portions within a route's `path`.
+# Parameters are uniquely named placeholders wrapped within curly braces.
+# For example, `/blog/{slug}` includes a `slug` parameter.
+# Routes can have more than one parameter, but each one may only map to a single value.
+# Parameter placeholders may also be included with static portions for a string, such as `/blog/posts-about-{category}`.
+# This can be useful for supporting format based URLs, such as `/users.json` or `/users.csv` via a `/users.{_format}` path.
+#
+# ### Parameter Validation
+#
+# By default, a placeholder is happy to accept any value.
+# However in most cases you will want to restrict which values it allows, such as ensuring only numeric digits are allowed for a `page` parameter.
+# Parameter validation also allows multiple routes to have variable portions within the same location.
+# I.e. allowing `/blog/{slug}` and `/blog/{page}` to co-exist, which is a limitation for some other Crystal routers.
+#
+# The `requirements` property accepts a `Hash(String, String | Regex)` where the keys are the name of the parameter and the value is a pattern
+# in which the value must match for the route to match. The value can either be a string for exact matches, or a `Regex` for more complex patterns.
+#
+# Route parameters may also be inlined within the `path` by putting the pattern within `<>`, instead of providing it as a dedicated argument.
+# For example, `"/blog/{page<\\d+>}"` (note we need to escape the `\` within a string literal).
+#
+# ```
+# routes = ART::RouteCollection.new
+# routes.add "blog_list", ART::Route.new "/blog/{page}", requirements: {"page" => /\d+/}
+# routes.add "blog_show", ART::Route.new "/blog/{slug}"
+#
+# matcher.match "/blog/foo" # => {"_route" => "blog_show", "slug" => "foo"}
+# matcher.match "/blog/10"  # => {"_route" => "blog_list", "page" => "10"}
+# ```
+#
+# ### Optional Parameters
+#
+# By default, all parameters are required, meaning given the path `/blog/{page}`, `/blog/10` would match but `/blog` would _NOT_ match.
+# Parameters can be made optional by providing a default value for the parameter, for example:
+#
+# ```
+# ART::Route.new "/blog/{page}", {"page" => 1}, {"page" => /\d+/}
+#
+# # ...
+#
+# matcher.match "/blog" # => {"_route" => "blog_list", "page" => "1"}
+# ```
+#
+# CAUTION: More than one parameter may have a default value, but everything after an optional parameter must also be optional.
+# For example within `/{page}/blog`, `page` will always be required and `/blog` will _NOT_ match.
+#
+# `defaults` may also be inlined within the `path` by putting the value after a `?`.
+# This is also compatible with `requirements`, allowing both to be defined within a path.
+# For example `/blog/{page<\\d+>?1}`.
+#
+# TIP: The default value for a parameter may also be `nil`, with the inline syntax being adding a `?` with no following value, e.g. `{page?}`.
+# Be sure to update any type restrictions to be nilable as well.
+#
+# ### Priority Parameter
+#
+# When determining which route should match, the first matching route will win.
+# For example, if two routes were added with variable parameters in the same location, the first one that was added would match regardless of what their requirements are.
+# In most cases this will not be a problem, but in some cases you may need to ensure a particular route is checked first.
+#
+# ### Special Parameters
+#
+# The routing component comes with a few standardized parameters that have special meanings.
+# These parameters could be leveraged within the underlying implementation, but are not directly used within the routing component other than for matching.
+#
+# * `_format` - Could be used to set the underlying format of the request, as well as determining the [content-type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) of the response.
+# * `_fragment` - Represents the fragment identifier when generating a URL. E.g. `/article/10#summary` with the fragment being `summary`.
+# * `_locale` - Could be used to set the underlying locale of the `ART::Request` based on which route is matched.
+#
+# ```
+# ART::Route.new(
+#   "/articles/{_locale}/search.{_format}",
+#   {
+#     "_locale" => "en",
+#     "_format" => "html",
+#   },
+#   {
+#     "_locale" => /en|fr/,
+#     "_format" => /html|xml/,
+#   }
+# )
+# ```
+#
+# This route supports `en` and `fr` locales in either `html` or `xml` formats with a default of `en` and `html`.
+#
+# ### Extra Parameters
+#
+# The defaults defined within a route do not all need to be present as route parameters.
+# This could be useful to provide extra context to the controller that should handle the request.
+#
+# ```
+# ART::Route.new "/blog/{page}", {"page" => 1, "title" => "Hello world!"}
+# ```
+#
+# ### Slash Characters in Route Parameters
+#
+# By default, route parameters may include any value except a `/`, since that's the character used to separate the different portions of the URL.
+# Route parameter matching logic may be made more permissive by using a more liberal regex, such as `.+`, for example:
+#
+# ```
+# ART::Route.new "/share/{token}", requirements: {"token" => /.+/}
+# ```
+#
+# Special parameters should _NOT_ be made more permissive.
+# For example, if the pattern is `/share/{token}.{_format}` and `{token}` allows any character, the `/share/foo/bar.json` URL will consider `foo/bar.json` as the token and the format will be empty.
+# This can be solved by replacing the `.+` requirement with `[^.]+` to allow any character except dots.
+#
+# Related to this, allowing multiple parameters to accept `/` may lead to unexpected results.
+#
+# ## Sub-Domain Routing
+#
+# The `host` property can be used to require the HTTP [host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header to match this value in order for the route to match.
+#
+# ```
+# mobile_homepage = ART::Route.new "/", host: "m.example.com"
+# homepage = ART::Route.new "/"
+# ```
+#
+# In this example, both routes match the same path, but one requires a specific hostname.
+# The `host` parameter can also be used as route parameters, including `defaults` and `requirements` support:
+#
+# ```
+# mobile_homepage = ART::Route.new(
+#   "/",
+#   {"subdomain" => "m"},
+#   {"subdomain" => /m|mobile/},
+#   "{subdomain}.example.com"
+# )
+# homepage = ART::Route.new "/"
+# ```
+#
+# TIP: Inline defaults and requirements also works for `host` values, `"{subdomain<m|mobile>?m}.example.com"`.
 class Athena::Routing::Route
   # Allows applying dynamic runtime logic to determine if a request matches.
   alias Condition = Proc(ART::RequestContext, ART::Request, Bool)
 
+  # Returns the URL that this route will handle.
   getter path : String
+
+  # Returns a hash
   getter defaults : Hash(String, String?) = Hash(String, String?).new
   getter requirements : Hash(String, Regex) = Hash(String, Regex).new
   getter host : String?
@@ -12,6 +182,7 @@ class Athena::Routing::Route
   property condition : Condition? = nil
 
   # TODO: Don't think we actually know what this is:
+
   getter schemes : Set(String)? = nil
 
   @compiled_route : ART::CompiledRoute? = nil
@@ -21,8 +192,8 @@ class Athena::Routing::Route
     defaults : Hash(String, _) = Hash(String, String?).new,
     requirements : Hash(String, Regex | String) = Hash(String, Regex | String).new,
     host : String | Regex | Nil = nil,
-    methods : String | Enumerable(String)? = nil,
-    schemes : String | Enumerable(String)? = nil
+    methods : String | Enumerable(String) | Nil = nil,
+    schemes : String | Enumerable(String) | Nil = nil
   )
     self.path = @path
     self.add_defaults defaults
@@ -32,7 +203,10 @@ class Athena::Routing::Route
     self.schemes = schemes unless schemes.nil?
   end
 
+  # :nodoc:
   def_equals @path, @defaults, @requirements, @host, @methods, @schemes
+
+  # :nodoc:
   def_clone
 
   def condition(&@condition : ART::RequestContext, ART::Request -> Bool) : self
