@@ -103,7 +103,7 @@ module Athena::Routing::RouteCompiler
       end
 
       tokens << if is_important
-        ART::CompiledRoute::Token.new :variable, is_separator ? preceding_char : "", regex, var_name, important: true
+        ART::CompiledRoute::Token.new :variable, is_separator ? preceding_char : "", regex, var_name, true
       else
         ART::CompiledRoute::Token.new :variable, is_separator ? preceding_char : "", regex, var_name
       end

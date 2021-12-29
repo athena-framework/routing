@@ -1,8 +1,16 @@
-# #### Priority Parameter
+# Represents a collection of `ART::Route`s.
+# Provides a way to traverse, edit, remove, and access the stored routes.
+#
+# Each route has an associated name that should be unique.
+# Adding another route with the same name will override the previous one.
+#
+# ## Route Priority
 #
 # When determining which route should match, the first matching route will win.
 # For example, if two routes were added with variable parameters in the same location, the first one that was added would match regardless of what their requirements are.
 # In most cases this will not be a problem, but in some cases you may need to ensure a particular route is checked first.
+#
+# The `priority` argument within `#add` can be used to control this order.
 class Athena::Routing::RouteCollection
   include Enumerable({String, Athena::Routing::Route})
   include Iterable({String, Athena::Routing::Route})
@@ -12,6 +20,7 @@ class Athena::Routing::RouteCollection
 
   @sorted : Bool = false
 
+  # :nodoc:
   def_clone
 
   # TODO: Support route aliases?
@@ -28,6 +37,7 @@ class Athena::Routing::RouteCollection
     self.routes[name]?
   end
 
+  # Adds all the routes from the provided *collection* to this collection.
   def add(collection : self) : Nil
     @sorted = false
 
@@ -43,6 +53,7 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  # Adds the provided *route* with the provided *name* to this collection, optionally with the provided *priority*.
   def add(name : String, route : ART::Route, priority : Int32 = 0) : Nil
     self.delete name
 
@@ -59,6 +70,8 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  # Adds a path *prefix* to all routes stored in this collection.
+  # Optionally allows merging in additional *defaults* or *requirements*.
   def add_prefix(prefix : String, defaults : Hash(String, _) = Hash(String, String?).new, requirements : Hash(String, String | Regex) = Hash(String, String | Regex).new) : Nil
     prefix = prefix.strip.rstrip '/'
     return if prefix.empty?
@@ -70,6 +83,7 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  # Adds the provided *prefix* to the name of all routes stored within this collection.
   def add_name_prefix(prefix : String) : Nil
     prefixed_routes = Hash(String, ART::Route).new
     prefixed_priorities = Hash(String, Int32).new
@@ -92,6 +106,7 @@ class Athena::Routing::RouteCollection
     @priorities = prefixed_priorities
   end
 
+  # Merges the provided *requirements* into all routes stored within this collection.
   def add_requirements(requirements : Hash(String, Regex | String)) : Nil
     return if requirements.empty?
 
@@ -100,6 +115,8 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  # Sets the host property of all routes stored in this collection.
+  # Optionally allows merging in additional *defaults* or *requirements*.
   def set_host(host : String, defaults : Hash(String, _) = Hash(String, String?).new, requirements : Hash(String, String | Regex) = Hash(String, String | Regex).new) : Nil
     @routes.each_value do |route|
       route.host = host
@@ -108,22 +125,26 @@ class Athena::Routing::RouteCollection
     end
   end
 
+  # Sets the scheme(s) of all routes stored within this collection.
   def schemes=(schemes : String | Enumerable(String)) : Nil
     @routes.each_value do |route|
       route.schemes = schemes
     end
   end
 
+  # Sets the method(s) of all routes stored within this collection.
   def methods=(methods : String | Enumerable(String)) : Nil
     @routes.each_value do |route|
       route.methods = methods
     end
   end
 
+  # Removes the routes with the provide *names*.
   def remove(*names : String) : Nil
     names.each { |n| self.remove n }
   end
 
+  # Removes the route with the provide *name*.
   def remove(name : String) : Nil
     self.delete name
   end
@@ -140,7 +161,7 @@ class Athena::Routing::RouteCollection
     self.routes.each
   end
 
-  # Returns the routes hash.
+  # Returns the routes stored within this collection.
   def routes : Hash(String, ART::Route)
     if !@priorities.empty? && !@sorted
       insert_order = @routes.keys
@@ -163,6 +184,7 @@ class Athena::Routing::RouteCollection
     @routes
   end
 
+  # Returns the number of routes stored within this collection.
   def size : Int
     self.routes.size
   end

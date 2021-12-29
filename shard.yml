@@ -9,9 +9,9 @@ license: MIT
 repository: https://github.com/athena-framework/routing
 
 documentation: https://athenaframework.org/Routing
-
+ 
 description: |
-  Routing lib.
+  HTTP based routing library/framework.
 
 authors:
   - George Dietrich <george@dietrich.app>

@@ -1,19 +1,29 @@
+# Represents data from a request in an agnostic manner, primarily used to augment URL matching and generation with additional context.
 class Athena::Routing::RequestContext
   # Represents the path of the URL _before_ `#path`.
+  # E.g. a path that should be prefixed to all other `#path`s.
   getter base_url : String
+
   getter method : String
   getter path : String
   getter host : String
   getter scheme : String
   getter http_port : Int32
   getter https_port : Int32
+
+  # Returns the query string of the current request.
   getter query_string : String
+
+  # Returns the global parameters that should be used as part of the URL generation logic.
   getter parameters : Hash(String, String?) = Hash(String, String?).new
 
+  # Creates a new instance of self from the provided *uri*.
+  # The *host*, *scheme*, *http_port*, and *https_port* optionally act as fallbacks if they are not contained within the *uri*.
   def self.from_uri(uri : String, host : String = "localhost", scheme : String = "http", http_port : Int32 = 80, https_port : Int32 = 443) : self
-    self.from_uri URI.parse "uri", host, scheme, http_port, https_port
+    self.from_uri URI.parse(uri), host, scheme, http_port, https_port
   end
 
+  # :ditto:
   def self.from_uri(uri : URI, host : String = "localhost", scheme : String = "http", http_port : Int32 = 80, https_port : Int32 = 443) : self
     scheme = uri.scheme || scheme
 
@@ -50,8 +60,8 @@ class Athena::Routing::RequestContext
     self.scheme = @scheme
   end
 
+  # Updates the properties within `self` based on the provided *request*.
   def apply(request : ART::Request) : self
-    self.path = request.path
     self.method = request.method
     self.host = request.hostname || "localhost"
     self.query_string = request.query || ""
@@ -85,14 +95,6 @@ class Athena::Routing::RequestContext
   def scheme=(scheme : String) : self
     @scheme = scheme.downcase
 
-    self
-  end
-
-  def http_port=(@http_port : Int32) : self
-    self
-  end
-
-  def https_port=(@https_port : Int32) : self
     self
   end
 
