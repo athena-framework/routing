@@ -4,12 +4,12 @@
 # Ultimately, `ART::Route`s are compiled into `ART::CompiledRoute` that represents an immutable
 # snapshot of a route, along with `ART::CompiledRoute::Token`s representing each route parameter.
 #
-# By default, a route is very liberal in regards to what it matches.
+# By default, a route is very liberal in regards to what allows when matching.
 # E.g. Matching anything that matches the `path`, but with any HTTP method and any scheme.
-# The `methods` and `schemes` properties can be used to restrict with methods/schemes the route can handle.
+# The `methods` and `schemes` properties can be used to restrict which methods/schemes the route allows.
 #
 # ```
-# # This route will only handle `https` `POST` requests to `/`.
+# # This route will only handle `https` `POST` requests to `/path`.
 # route1 = ART::Route.new "/path", schemes: "https", methods: "POST"
 #
 # # This route will handle `http` or `ftp` `GET`/`PATCH` requests to `/path`.
@@ -19,8 +19,7 @@
 # ## Expressions
 #
 # In some cases you may want to match a route using arbitrary dynamic runtime logic.
-# An example use case for this could be checking a request header, attribute,
-# or anything else on the underlying `ART::RequestContext` and/or `ART::Request` instance.
+# An example use case for this could be checking a request header, or anything else on the underlying `ART::RequestContext` and/or `ART::Request` instance.
 # The `condition` property can be used for just this purpose:
 #
 # ```
@@ -33,7 +32,7 @@
 # This route would only match requests whose `user-agent` header includes `Firefox`.
 # Be sure to also handle cases where headers may not be set.
 #
-# WARNING: Route conditions are _NOT_ taken into consideration when generating routes via an `ART::Generator::URLGeneratorInterface`.
+# WARNING: Route conditions are _NOT_ taken into consideration when generating routes via an `ART::Generator::Interface`.
 #
 # ## Parameters
 #
@@ -55,7 +54,7 @@
 # in which the value must match for the route to match. The value can either be a string for exact matches, or a `Regex` for more complex patterns.
 #
 # Route parameters may also be inlined within the `path` by putting the pattern within `<>`, instead of providing it as a dedicated argument.
-# For example, `"/blog/{page<\\d+>}"` (note we need to escape the `\` within a string literal).
+# For example, `/blog/{page<\\d+>}` (note we need to escape the `\` within a string literal).
 #
 # ```
 # routes = ART::RouteCollection.new
@@ -120,6 +119,9 @@
 #
 # This route supports `en` and `fr` locales in either `html` or `xml` formats with a default of `en` and `html`.
 #
+# TIP: The trailing `.` is optional if the parameter to the right has a default.
+# E.g. `/articles/en/search` would match with a format of `html` but `/articles/en/search.xml` would be required for matching non-default formats.
+#
 # ### Extra Parameters
 #
 # The defaults defined within a route do not all need to be present as route parameters.
@@ -142,7 +144,7 @@
 # For example, if the pattern is `/share/{token}.{_format}` and `{token}` allows any character, the `/share/foo/bar.json` URL will consider `foo/bar.json` as the token and the format will be empty.
 # This can be solved by replacing the `.+` requirement with `[^.]+` to allow any character except dots.
 #
-# Related to this, allowing multiple parameters to accept `/` may lead to unexpected results.
+# Related to this, allowing multiple parameters to accept `/` may also lead to unexpected results.
 #
 # ## Sub-Domain Routing
 #
@@ -168,21 +170,38 @@
 #
 # TIP: Inline defaults and requirements also works for `host` values, `"{subdomain<m|mobile>?m}.example.com"`.
 class Athena::Routing::Route
-  # Allows applying dynamic runtime logic to determine if a request matches.
+  # Represents the callback proc used to dynamically determine if a route should be matched.
+  # See [Routing Expressions][Athena::Routing::Route--expressions] for more information.
   alias Condition = Proc(ART::RequestContext, ART::Request, Bool)
 
   # Returns the URL that this route will handle.
+  # See [Routing Parameters][Athena::Routing::Route--parameters] for more information.
   getter path : String
 
-  # Returns a hash
+  # Returns a hash representing the default values of a route's parameters if they were not provided in the request.
+  # See [Optional Parameters][Athena::Routing::Route--optional-parameters] for more information.
   getter defaults : Hash(String, String?) = Hash(String, String?).new
+
+  # Returns a hash representing the requirements the route's parameters must match in order for this route to match.
+  # See [Parameter Validation][Athena::Routing::Route--parameter-validation] for more information.
   getter requirements : Hash(String, Regex) = Hash(String, Regex).new
+
+  # Returns the hostname that the HTTP [host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header must match in order for this route to match.
+  # See [Sub-Domain Routing][Athena::Routing::Route--sub-domain-routing] for more information.
   getter host : String?
+
+  # Returns the set of valid HTTP methods that this route supports.
+  # See [ART::Route][] for more information.
   getter methods : Set(String)?
+
+  # Returns the optional `ART::Route::Condition` callback used to determine if this route should match.
+  # See [Routing Expressions][Athena::Routing::Route--expressions] for more information.
   property condition : Condition? = nil
 
   # TODO: Don't think we actually know what this is:
 
+  # Returns the set of valid URI schemes that this route supports.
+  # See [ART::Route][] for more information.
   getter schemes : Set(String)? = nil
 
   @compiled_route : ART::CompiledRoute? = nil
@@ -209,10 +228,22 @@ class Athena::Routing::Route
   # :nodoc:
   def_clone
 
+  # Sets the optional `ART::Route::Condition` callback used to determine if this route should match.
+  #
+  # ```
+  # route = ART::Route.new "/foo"
+  # route.condition do |context, request|
+  #   request.headers["user-agent"].includes? "Firefox"
+  # end
+  # ```
+  #
+  # See [Routing Expressions][Athena::Routing::Route--expressions] for more information.
   def condition(&@condition : ART::RequestContext, ART::Request -> Bool) : self
     self
   end
 
+  # Sets the hostname that the HTTP [host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header must match in order for this route to match to the provided *pattern*.
+  # See [Sub-Domain Routing][Athena::Routing::Route--sub-domain-routing] for more information.
   def host=(pattern : String | Regex) : self
     @host = self.extract_inline_defaults_and_requirements pattern
     @compiled_route = nil
@@ -220,6 +251,7 @@ class Athena::Routing::Route
     self
   end
 
+  # Sets the path required for this route to match to the provided *pattern*.
   def path=(pattern : String) : self
     pattern = self.extract_inline_defaults_and_requirements pattern
     @path = "/#{pattern.strip.lstrip '/'}"
@@ -228,6 +260,8 @@ class Athena::Routing::Route
     self
   end
 
+  # Sets the set of valid URI *scheme(s)* that this route supports.
+  # See [ART::Route][] for more information.
   def schemes=(schemes : String | Enumerable(String)) : self
     schemes = schemes.is_a?(String) ? {schemes} : schemes
 
@@ -240,6 +274,8 @@ class Athena::Routing::Route
     self
   end
 
+  # Sets the set of valid HTTP *method(s)* that this route supports.
+  # See [ART::Route][] for more information.
   def methods=(methods : String | Enumerable(String)) : self
     methods = methods.is_a?(String) ? {methods} : methods
 
@@ -252,24 +288,32 @@ class Athena::Routing::Route
     self
   end
 
+  # Compiles and returns an `ART::CompiledRoute` representing this route.
+  # The route is only compiled once and future calls to this method will return the same compiled route,
+  # assuming no changes were made to this route in between.
   def compile : CompiledRoute
     @compiled_route ||= ART::RouteCompiler.compile self
   end
 
-  def has_default(key : String) : Bool
-    @defaults.has_key? key
+  # Returns `true` if this route has a default with the provided *key*, otherwise `false`.
+  def has_default?(key : String) : Bool
+    !!@defaults.try &.has_key?(key)
   end
 
+  # Returns the default with the provided *key*, if any.
   def default(key : String) : String?
     @defaults[key]?
   end
 
+  # Sets the hash representing the default values of a route's parameters if they were not provided in the request to the provided *defaults*.
+  # See [Optional Parameters][Athena::Routing::Route--optional-parameters] for more information.
   def defaults=(defaults : Hash(String, _)) : self
     @defaults.clear
 
     self.add_defaults defaults
   end
 
+  # Adds the provided *defaults*, overriding previously set values.
   def add_defaults(defaults : Hash(String, _)) : self
     if defaults.has_key?("_locale") && self.localized?
       defaults.delete "_locale"
@@ -284,6 +328,7 @@ class Athena::Routing::Route
     self
   end
 
+  # Sets the default with the provided *key* to the provided *value*.
   def set_default(key : String, value : String?) : self
     if "_locale" == key && self.localized?
       return self
@@ -295,20 +340,25 @@ class Athena::Routing::Route
     self
   end
 
-  def has_requirement(key : String) : Bool
-    @requirements.has_key? key
+  # Returns `true` if this route has a requirement with the provided *key*, otherwise `false`.
+  def has_requirement?(key : String) : Bool
+    !!@requirements.try &.has_key?(key)
   end
 
+  # Returns the requirement with the provided *key*, if any.
   def requirement(key : String) : Regex?
     @requirements[key]?
   end
 
+  # Sets the hash representing the requirements the route's parameters must match in order for this route to match to the provided *requirements*.
+  # See [Parameter Validation][Athena::Routing::Route--parameter-validation] for more information.
   def requirements=(requirements : Hash(String, Regex | String)) : self
     @requirements.clear
 
     self.add_requirements requirements
   end
 
+  # Adds the provided *requirements*, overriding previously set values.
   def add_requirements(requirements : Hash(String, Regex | String)) : self
     if requirements.has_key?("_locale") && self.localized?
       requirements.delete "_locale"
@@ -323,6 +373,7 @@ class Athena::Routing::Route
     self
   end
 
+  # Sets the requirement with the provided *key* to the provided *value*.
   def set_requirement(key : String, requirement : Regex | String) : self
     if "_locale" == key && self.localized?
       return self
@@ -333,10 +384,6 @@ class Athena::Routing::Route
     @compiled_route = nil
 
     self
-  end
-
-  def has_default?(name : String) : Bool
-    !!@defaults.try &.has_key?(name)
   end
 
   private def extract_inline_defaults_and_requirements(pattern : Regex) : String

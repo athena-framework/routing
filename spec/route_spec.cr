@@ -60,8 +60,8 @@ struct RouteTest < ASPEC::TestCase
     route.add_defaults({"bar" => "bar"})
     route.defaults.should eq({"foo" => "foo", "bar" => "bar"})
 
-    route.has_default("foo").should be_true
-    route.has_default("missing").should be_false
+    route.has_default?("foo").should be_true
+    route.has_default?("missing").should be_false
   end
 
   def test_requirements : Nil
@@ -76,8 +76,8 @@ struct RouteTest < ASPEC::TestCase
     route.requirements = {"foo" => /^\d+$/, "bar" => /\A\d+\z/}
     route.requirements.should eq({"foo" => /\d+/, "bar" => /\d+/})
 
-    route.has_requirement("foo").should be_true
-    route.has_requirement("missing").should be_false
+    route.has_requirement?("foo").should be_true
+    route.has_requirement?("missing").should be_false
 
     route.requirements = Hash(String, Regex | String).new
     route.set_requirement "foo", "foo"

@@ -51,7 +51,11 @@ alias ARTA = ART::Annotations
 # # Match a request by path.
 # matcher = ART::Matcher::URLMatcher.new context
 # matcher.match "/blog/foo-bar" # => {"_route" => "blog_show", "slug" => "foo-bar"}
+# ```
 #
+# It is also possible to go the other way, generate a URL based on its name and set of parameters:
+#
+# ```
 # # Generating routes based on route name and parameters is also possible.
 # generator = ART::Generator::URLGenerator.new context
 # generator.generate "blog_show", slug: "bar-baz", source: "Crystal" # => "/blog/bar-baz?source=Crystal"
