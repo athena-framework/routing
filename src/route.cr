@@ -1,7 +1,8 @@
 # TODO: How to store a reference to the "Controller"
 # in quotes because it technically doesn't need to be an ART::Controller.
 class Athena::Routing::Route
-  alias Condition = Proc(ART::RequestContext, Athena::Routing::Request, Bool)
+  # Allows applying dynamic runtime logic to determine if a request matches.
+  alias Condition = Proc(ART::RequestContext, ART::Request, Bool)
 
   getter path : String
   getter defaults : Hash(String, String?) = Hash(String, String?).new
@@ -19,13 +20,14 @@ class Athena::Routing::Route
     @path : String,
     defaults : Hash(String, _) = Hash(String, String?).new,
     requirements : Hash(String, Regex | String) = Hash(String, Regex | String).new,
-    @host : String? = nil,
+    host : String | Regex | Nil = nil,
     methods : String | Enumerable(String)? = nil,
     schemes : String | Enumerable(String)? = nil
   )
     self.path = @path
     self.add_defaults defaults
     self.add_requirements requirements
+    self.host = host unless host.nil?
     self.methods = methods unless methods.nil?
     self.schemes = schemes unless schemes.nil?
   end
@@ -54,8 +56,10 @@ class Athena::Routing::Route
 
   def schemes=(schemes : String | Enumerable(String)) : self
     schemes = schemes.is_a?(String) ? {schemes} : schemes
-    @schemes ||= Set(String).new
-    schemes.each { |s| @schemes.not_nil! << s.downcase }
+
+    schemes_set = (@schemes ||= Set(String).new)
+    schemes_set.clear
+    schemes.each { |s| schemes_set << s.downcase }
 
     @compiled_route = nil
 
@@ -159,6 +163,10 @@ class Athena::Routing::Route
 
   def has_default?(name : String) : Bool
     !!@defaults.try &.has_key?(name)
+  end
+
+  private def extract_inline_defaults_and_requirements(pattern : Regex) : String
+    self.extract_inline_defaults_and_requirements pattern.source
   end
 
   private def extract_inline_defaults_and_requirements(pattern : String) : String

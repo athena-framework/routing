@@ -12,7 +12,7 @@ struct RouteCollectionTest < ASPEC::TestCase
 
     collection["bar"]?.should be_nil
 
-    expect_raises ART::Exception::InvalidArgument, "Unknown route: 'bar'." do
+    expect_raises ART::Exception::RouteNotFound, "No route with the name 'bar' exists." do
       collection["bar"]
     end
   end

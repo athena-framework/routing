@@ -11,6 +11,18 @@ class Athena::Routing::RouteCollection
 
   # TODO: Support route aliases?
 
+  # Returns the `ART::Action` with the provided *name*.
+  #
+  # Raises a `ART::Exception::RouteNotFound` if a route with the provided *name* does not exist.
+  def [](name : String) : ART::Route
+    self.routes.fetch(name) { raise ART::Exception::RouteNotFound.new "No route with the name '#{name}' exists." }
+  end
+
+  # Returns the `ART::Action` with the provided *name*, or `nil` if it does not exist.
+  def []?(name : String) : ART::Route?
+    self.routes[name]?
+  end
+
   def add(collection : self) : Nil
     @sorted = false
 
@@ -20,8 +32,8 @@ class Athena::Routing::RouteCollection
 
       @routes[name] = route
 
-      if collection.priorities.has_key? name
-        @priorities[name] = collection.priorities[name]
+      if priority = collection.priorities[name]?
+        @priorities[name] = priority
       end
     end
   end
@@ -144,18 +156,6 @@ class Athena::Routing::RouteCollection
     end
 
     @routes
-  end
-
-  # Returns the `ART::Action` with the provided *name*.
-  #
-  # Raises a `ART::Exception::InvalidArgument` if a route with the provided *name* does not exist.
-  def [](name : String) : ART::Route
-    self.routes.fetch(name) { raise ART::Exception::InvalidArgument.new "Unknown route: '#{name}'." }
-  end
-
-  # Returns the `ART::Action` with the provided *name*, or `nil` if it does not exist.
-  def []?(name : String) : ART::Route?
-    self.routes[name]?
   end
 
   def size : Int

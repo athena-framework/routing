@@ -88,11 +88,11 @@ class Athena::Routing::Generator::URLGenerator
     variables : Set(String),
     defaults : Hash(String, String?),
     requirements : Hash(String, Regex),
-    tokens : Array(ART::RouteCompiler::Token),
+    tokens : Array(ART::CompiledRoute::Token),
     params : Hash(String, String?),
     name : String,
     reference_type : ART::Generator::ReferenceType,
-    host_tokens : Array(ART::RouteCompiler::Token),
+    host_tokens : Array(ART::CompiledRoute::Token),
     required_schemes : Set(String)?
   ) : String
     merged_params = Hash(String, String?).new

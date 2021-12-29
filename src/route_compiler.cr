@@ -1,46 +1,20 @@
+# :nodoc:
 module Athena::Routing::RouteCompiler
   private PATH_REGEX = /{(!)?(\w+)}/
   private SEPARATORS = "/,;.:-_~+*=@|"
   private MAX_LENGTH = 32
 
-  # :nodoc:
-  struct Token
-    enum Type
-      TEXT
-      VARIABLE
-    end
-
-    getter type : Type
-    getter prefix : String
-    getter regex : Regex?
-    getter var_name : String?
-    getter regex_options : Nil
-    getter? important : Bool
-
-    def initialize(
-      @type : Type,
-      @prefix : String,
-      @regex : Regex? = nil,
-      @var_name : String? = nil,
-      @regex_options : Nil = nil,
-      @important : Bool = false
-    )
-    end
-
-    def_clone
-  end
-
   private record CompiledPattern,
     static_prefix : String,
     regex : Regex,
-    tokens : Array(Token),
+    tokens : Array(ART::CompiledRoute::Token),
     variables : Set(String)
 
   def self.compile(route : Route) : CompiledRoute
     host_variables = Set(String).new
     variables = Set(String).new
     host_regex = nil
-    host_tokens = Array(Token).new
+    host_tokens = Array(ART::CompiledRoute::Token).new
 
     if host = route.host.presence
       pattern = self.compile_pattern route, host, true
@@ -87,7 +61,7 @@ module Athena::Routing::RouteCompiler
   private def self.compile_pattern(route : Route, pattern : String, is_host : Bool)
     pos = 0
     variables = Set(String).new
-    tokens = Array(Token).new
+    tokens = Array(ART::CompiledRoute::Token).new
     default_separator = is_host ? "." : "/"
 
     # Matches and iterates over all variables within `{}`.
@@ -110,9 +84,9 @@ module Athena::Routing::RouteCompiler
       raise ART::Exception::InvalidArgument.new "Variable name '#{var_name}' cannot be longer than #{MAX_LENGTH} characters in route pattern '#{pattern}'." if var_name.size > MAX_LENGTH
 
       if is_separator && preceding_text != preceding_char
-        tokens << Token.new :text, preceding_text[0...-preceding_char.size]
+        tokens << ART::CompiledRoute::Token.new :text, preceding_text[0...-preceding_char.size]
       elsif !is_separator && !preceding_text.empty?
-        tokens << Token.new :text, preceding_text
+        tokens << ART::CompiledRoute::Token.new :text, preceding_text
       end
 
       if regex = route.requirement var_name
@@ -129,14 +103,14 @@ module Athena::Routing::RouteCompiler
       end
 
       tokens << if is_important
-        Token.new :variable, is_separator ? preceding_char : "", regex, var_name, important: true
+        ART::CompiledRoute::Token.new :variable, is_separator ? preceding_char : "", regex, var_name, important: true
       else
-        Token.new :variable, is_separator ? preceding_char : "", regex, var_name
+        ART::CompiledRoute::Token.new :variable, is_separator ? preceding_char : "", regex, var_name
       end
     end
 
     if pos < pattern.size
-      tokens << Token.new :text, pattern[pos..]
+      tokens << ART::CompiledRoute::Token.new :text, pattern[pos..]
     end
 
     first_optional_index = Int32::MAX
@@ -171,7 +145,7 @@ module Athena::Routing::RouteCompiler
     )
   end
 
-  private def self.determine_static_prefix(route : Route, tokens : Array(Token)) : String
+  private def self.determine_static_prefix(route : Route, tokens : Array(ART::CompiledRoute::Token)) : String
     first_token = tokens.first
 
     unless first_token.type.text?
@@ -196,7 +170,7 @@ module Athena::Routing::RouteCompiler
     SEPARATORS.includes?(pattern) ? pattern : ""
   end
 
-  private def self.compute_regex(tokens : Array(Token), idx : Int, first_optional_index : Int) : String
+  private def self.compute_regex(tokens : Array(ART::CompiledRoute::Token), idx : Int, first_optional_index : Int) : String
     token = tokens[idx]
 
     case token.type

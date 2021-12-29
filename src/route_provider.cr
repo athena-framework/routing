@@ -17,7 +17,7 @@ class Athena::Routing::RouteProvider
 
   # We store this as a tuple in order to get splatting/unpacking features.
   # variables, defaults, requirements, tokens, host tokens, schemes
-  alias RouteGenerationData = Tuple(Set(String), Hash(String, String?), Hash(String, Regex), Array(ART::RouteCompiler::Token), Array(ART::RouteCompiler::Token), Set(String)?)
+  alias RouteGenerationData = Tuple(Set(String), Hash(String, String?), Hash(String, Regex), Array(ART::CompiledRoute::Token), Array(ART::CompiledRoute::Token), Set(String)?)
 
   private record PreCompiledStaticRoute, route : ART::Route, has_trailing_slash : Bool
   private record PreCompiledDynamicRegex, host_regex : Regex?, regex : Regex, static_prefix : String

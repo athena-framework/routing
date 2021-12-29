@@ -15,6 +15,11 @@ struct RouteTest < ASPEC::TestCase
     route = ART::Route.new "/", schemes: "Https", methods: "Post"
     route.schemes.should eq Set{"https"}
     route.methods.should eq Set{"POST"}
+
+    route = ART::Route.new "/foo", host: /foo.com/
+    route.host.should eq "foo.com"
+    route.host = /bar.net/
+    route.host.should eq "bar.net"
   end
 
   @[DataProvider("path_provider")]

@@ -2,7 +2,7 @@ require "./spec_helper"
 
 struct RouteCompilerTest < ASPEC::TestCase
   @[DataProvider("compiler_provider")]
-  def test_compile(route : ART::Route, prefix : String, regex : Regex, variables : Set(String), tokens : Array(ART::RouteCompiler::Token)) : Nil
+  def test_compile(route : ART::Route, prefix : String, regex : Regex, variables : Set(String), tokens : Array(ART::CompiledRoute::Token)) : Nil
     compiled_route = route.compile
     compiled_route.static_prefix.should eq prefix
     compiled_route.regex.should eq regex
@@ -18,7 +18,7 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo$/,
         Set(String).new,
         [
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
         ],
       },
       "single variable" => {
@@ -27,8 +27,8 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo\/(?P<bar>[^\/]++)$/,
         Set{"bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
 
         ],
       },
@@ -38,8 +38,8 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo(?:\/(?P<bar>[^\/]++))?$/,
         Set{"bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
 
         ],
       },
@@ -49,9 +49,9 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo\/(?P<bar>[^\/]++)\/(?P<foobar>[^\/]++)$/,
         Set{"bar", "foobar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "foobar"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "foobar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
 
         ],
       },
@@ -61,9 +61,9 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo(?:\/(?P<bar>[^\/]++)(?:\/(?P<foobar>[^\/]++))?)?$/,
         Set{"bar", "foobar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "foobar"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "foobar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
 
         ],
       },
@@ -73,9 +73,9 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo\/(?P<bar>[^\/]++)\/(?P<foobar>[^\/]++)$/,
         Set{"bar", "foobar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "foobar"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "foobar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
 
         ],
       },
@@ -85,7 +85,7 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/(?P<bar>[^\/]++)?$/,
         Set{"bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
         ],
       },
       "optional variable as the first segment with requirement" => {
@@ -94,7 +94,7 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/(?P<bar>(?:foo|bar))?$/,
         Set{"bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /(?:foo|bar)/, "bar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /(?:foo|bar)/, "bar"),
         ],
       },
       "only optional variables with defaults" => {
@@ -103,8 +103,8 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/(?P<foo>[^\/]++)?(?:\/(?P<bar>[^\/]++))?$/,
         Set{"foo", "bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "foo"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "foo"),
         ],
       },
       "variable in last position" => {
@@ -113,8 +113,8 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo\-(?P<bar>[^\/]++)$/,
         Set{"bar"},
         [
-          ART::RouteCompiler::Token.new(:variable, "-", /[^\/]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, "-", /[^\/]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
         ],
       },
       "nested placeholders" => {
@@ -123,9 +123,9 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/\{static(?P<var>[^\/]+)static\}$/,
         Set{"var"},
         [
-          ART::RouteCompiler::Token.new(:text, "static}"),
-          ART::RouteCompiler::Token.new(:variable, "", /[^\/]+/, "var"),
-          ART::RouteCompiler::Token.new(:text, "/{static"),
+          ART::CompiledRoute::Token.new(:text, "static}"),
+          ART::CompiledRoute::Token.new(:variable, "", /[^\/]+/, "var"),
+          ART::CompiledRoute::Token.new(:text, "/{static"),
         ],
       },
       "separator between variables" => {
@@ -134,11 +134,11 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/(?P<w>[^\/\.]+)(?P<x>[^\/\.]+)(?P<y>(?:y|Y))(?:(?P<z>[^\/\.]++)(?:\.(?P<_format>[^\/]++))?)?$/,
         Set{"w", "x", "y", "z", "_format"},
         [
-          ART::RouteCompiler::Token.new(:variable, ".", /[^\/]++/, "_format"),
-          ART::RouteCompiler::Token.new(:variable, "", /[^\/\.]++/, "z"),
-          ART::RouteCompiler::Token.new(:variable, "", /(?:y|Y)/, "y"),
-          ART::RouteCompiler::Token.new(:variable, "", /[^\/\.]+/, "x"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/\.]+/, "w"),
+          ART::CompiledRoute::Token.new(:variable, ".", /[^\/]++/, "_format"),
+          ART::CompiledRoute::Token.new(:variable, "", /[^\/\.]++/, "z"),
+          ART::CompiledRoute::Token.new(:variable, "", /(?:y|Y)/, "y"),
+          ART::CompiledRoute::Token.new(:variable, "", /[^\/\.]+/, "x"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/\.]+/, "w"),
         ],
       },
       "with format" => {
@@ -147,9 +147,9 @@ struct RouteCompilerTest < ASPEC::TestCase
         /^\/foo\/(?P<bar>[^\/\.]++)\.(?P<_format>[^\/]++)$/,
         Set{"bar", "_format"},
         [
-          ART::RouteCompiler::Token.new(:variable, ".", /[^\/]++/, "_format"),
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/\.]++/, "bar"),
-          ART::RouteCompiler::Token.new(:text, "/foo"),
+          ART::CompiledRoute::Token.new(:variable, ".", /[^\/]++/, "_format"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/\.]++/, "bar"),
+          ART::CompiledRoute::Token.new(:text, "/foo"),
         ],
       },
     }
@@ -226,10 +226,10 @@ struct RouteCompilerTest < ASPEC::TestCase
     regex : Regex,
     variables : Set(String),
     path_variables : Set(String),
-    tokens : Array(ART::RouteCompiler::Token),
+    tokens : Array(ART::CompiledRoute::Token),
     host_regex : Regex,
     host_variables : Set(String),
-    host_tokens : Array(ART::RouteCompiler::Token)
+    host_tokens : Array(ART::CompiledRoute::Token)
   ) : Nil
     compiled_route = route.compile
     compiled_route.static_prefix.should eq prefix
@@ -251,12 +251,12 @@ struct RouteCompilerTest < ASPEC::TestCase
         Set(String).new,
         Set(String).new,
         [
-          ART::RouteCompiler::Token.new(:text, "/hello"),
+          ART::CompiledRoute::Token.new(:text, "/hello"),
         ],
         /^www\.example\.com$/i,
         Set(String).new,
         [
-          ART::RouteCompiler::Token.new(:text, "www.example.com"),
+          ART::CompiledRoute::Token.new(:text, "www.example.com"),
         ],
       },
       "with variable" => {
@@ -266,14 +266,14 @@ struct RouteCompilerTest < ASPEC::TestCase
         Set{"tld", "name"},
         Set{"name"},
         [
-          ART::RouteCompiler::Token.new(:variable, "/", /[^\/]++/, "name"),
-          ART::RouteCompiler::Token.new(:text, "/hello"),
+          ART::CompiledRoute::Token.new(:variable, "/", /[^\/]++/, "name"),
+          ART::CompiledRoute::Token.new(:text, "/hello"),
         ],
         /^www\.example\.(?P<tld>[^\.]++)$/i,
         Set{"tld"},
         [
-          ART::RouteCompiler::Token.new(:variable, ".", /[^\.]++/, "tld"),
-          ART::RouteCompiler::Token.new(:text, "www.example"),
+          ART::CompiledRoute::Token.new(:variable, ".", /[^\.]++/, "tld"),
+          ART::CompiledRoute::Token.new(:text, "www.example"),
         ],
       },
       "variable at beginning and end" => {
@@ -283,14 +283,14 @@ struct RouteCompilerTest < ASPEC::TestCase
         Set{"locale", "tld"},
         Set(String).new,
         [
-          ART::RouteCompiler::Token.new(:text, "/hello"),
+          ART::CompiledRoute::Token.new(:text, "/hello"),
         ],
         /^(?P<locale>[^\.]++)\.example\.(?P<tld>[^\.]++)$/i,
         Set{"locale", "tld"},
         [
-          ART::RouteCompiler::Token.new(:variable, ".", /[^\.]++/, "tld"),
-          ART::RouteCompiler::Token.new(:text, ".example"),
-          ART::RouteCompiler::Token.new(:variable, "", /[^\.]++/, "locale"),
+          ART::CompiledRoute::Token.new(:variable, ".", /[^\.]++/, "tld"),
+          ART::CompiledRoute::Token.new(:text, ".example"),
+          ART::CompiledRoute::Token.new(:variable, "", /[^\.]++/, "locale"),
         ],
       },
       "variable with a default value" => {
@@ -300,14 +300,14 @@ struct RouteCompilerTest < ASPEC::TestCase
         Set{"locale", "tld"},
         Set(String).new,
         [
-          ART::RouteCompiler::Token.new(:text, "/hello"),
+          ART::CompiledRoute::Token.new(:text, "/hello"),
         ],
         /^(?P<locale>[^\.]++)\.example\.(?P<tld>[^\.]++)$/i,
         Set{"locale", "tld"},
         [
-          ART::RouteCompiler::Token.new(:variable, ".", /[^\.]++/, "tld"),
-          ART::RouteCompiler::Token.new(:text, ".example"),
-          ART::RouteCompiler::Token.new(:variable, "", /[^\.]++/, "locale"),
+          ART::CompiledRoute::Token.new(:variable, ".", /[^\.]++/, "tld"),
+          ART::CompiledRoute::Token.new(:text, ".example"),
+          ART::CompiledRoute::Token.new(:variable, "", /[^\.]++/, "locale"),
         ],
       },
     }
