@@ -87,6 +87,12 @@ module Athena::Routing
   # Both acts as a namespace for exceptions related to the `Athena::Routing` component, as well as a way to check for exceptions from the component.
   module Exception; end
 
+  # Before `ART::Route`s can be matched or generated, they must first be compiled.
+  # This process compiles each route into its `ART::CompiledRoute` representation,
+  # then merges them all together into a more efficient cacheable format.
+  #
+  # The specifics of this process should be seen as an implementation detail.
+  # All you need to worry about is calling this method with your `ART::RouteCollection`.
   def self.compile(routes : ART::RouteCollection) : Nil
     ART::RouteProvider.compile routes
   end
