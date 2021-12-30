@@ -1,3 +1,4 @@
+# Default implementation of `ART::Generator::Interface`.
 class Athena::Routing::Generator::URLGenerator
   include Athena::Routing::Generator::Interface
   include Athena::Routing::Generator::ConfigurableRequirementsInterface
@@ -40,7 +41,10 @@ class Athena::Routing::Generator::URLGenerator
     "%2A" => "*",
   }
 
+  # :inherit:
   property context : ART::RequestContext
+
+  # :inherit:
   property? strict_requirements : Bool? = true
 
   def initialize(
@@ -49,14 +53,7 @@ class Athena::Routing::Generator::URLGenerator
   )
   end
 
-  def generate(route : String, reference_type : ART::Generator::ReferenceType = :absolute_path, **params) : String
-    self.generate route, params.to_h.transform_keys(&.to_s), reference_type
-  end
-
-  def generate(route : String, params : Hash(String, _) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
-    self.generate route, params.transform_values { |v| v.nil? ? v : v.to_s }, reference_type
-  end
-
+  # :inherit:
   def generate(route : String, params : Hash(String, String?) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
     if locale = params["_locale"]? || @context.parameters["_locale"]? || @default_locale
       if (locale_route = ART::RouteProvider.route_generation_data["#{route}.#{locale}"]?) && (route == locale_route[1]["_canonical_route"]?)
@@ -79,6 +76,16 @@ class Athena::Routing::Generator::URLGenerator
     end
 
     self.do_generate variables, defaults, requirements, tokens, params, route, reference_type, host_tokens, schemes
+  end
+
+  # :ditto:
+  def generate(route : String, reference_type : ART::Generator::ReferenceType = :absolute_path, **params) : String
+    self.generate route, params.to_h.transform_keys(&.to_s), reference_type
+  end
+
+  # :ditto:
+  def generate(route : String, params : Hash(String, _) = Hash(String, String?).new, reference_type : ART::Generator::ReferenceType = :absolute_path) : String
+    self.generate route, params.transform_values { |v| v.nil? ? v : v.to_s }, reference_type
   end
 
   # OPTIMIZE: We could probably make use of `URI` for a lot of this stuff.
@@ -203,7 +210,7 @@ class Athena::Routing::Generator::URLGenerator
       url = if @context.path == url
               ""
             else
-              Path.new(url).relative_to(@context.path).to_s
+              URI.new(path: @context.path).relativize(URI.new path: url).to_s
             end
     else
       url = "#{scheme_authority}#{@context.base_url}#{url}"

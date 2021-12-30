@@ -529,15 +529,35 @@ struct URLGeneratorTest < ASPEC::TestCase
 
     ART.compile routes
 
-    generator = self.generator routes, context: ART::RequestContext.new base_url: "/base", host: "example.com", path: "/George/athena-is-great"
+    generator = self.generator routes, context: ART::RequestContext.new base_url: "/base", host: "example.com", path: "/George/athena-is-great/"
 
     generator.generate("comments", author: "George", article: "athena-is-great", reference_type: :relative_path).should eq "comments"
     generator.generate("comments", author: "George", article: "athena-is-great", page: 2, reference_type: :relative_path).should eq "comments?page=2"
-    generator.generate("article", author: "George", article: "crystal-is-great", reference_type: :relative_path).should eq "../crystal-is-great"
-    generator.generate("article", author: "foo", article: "shards-is-great", reference_type: :relative_path).should eq "../../foo/shards-is-great"
+    generator.generate("article", author: "George", article: "crystal-is-great", reference_type: :relative_path).should eq "../crystal-is-great/"
+    generator.generate("article", author: "foo", article: "shards-is-great", reference_type: :relative_path).should eq "../../foo/shards-is-great/"
     generator.generate("host", author: "George", article: "crystal-is-great", reference_type: :relative_path).should eq "//George.example.com/base/crystal-is-great"
     generator.generate("scheme", author: "George", reference_type: :relative_path).should eq "https://example.com/base/George/blog"
     generator.generate("unrelated", reference_type: :relative_path).should eq "../../about"
+  end
+
+  # This is primarily just sanity checking the stdlib logic to ensure the correct methods are being used.
+  def test_generate_relative_path_internal : Nil
+    routes = ART::RouteCollection.new
+    routes.add "one", ART::Route.new "/a/b/c/d"
+    routes.add "two", ART::Route.new "/a/b/c/"
+    routes.add "three", ART::Route.new "/a/b/"
+    routes.add "four", ART::Route.new "/a/b/c/other"
+    routes.add "five", ART::Route.new "/a/x/y"
+
+    ART.compile routes
+
+    generator = self.generator routes, context: ART::RequestContext.new path: "/a/b/c/d"
+
+    generator.generate("one", reference_type: :relative_path).should eq ""
+    generator.generate("two", reference_type: :relative_path).should eq "./"
+    generator.generate("three", reference_type: :relative_path).should eq "../"
+    generator.generate("four", reference_type: :relative_path).should eq "other"
+    generator.generate("five", reference_type: :relative_path).should eq "../../x/y"
   end
 
   def test_generate_with_fragment : Nil

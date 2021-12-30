@@ -71,12 +71,19 @@ module Athena::Routing
     # Will be an `ATH::Request` instance if used within the Athena Framework, otherwise [HTTP::Request](https://crystal-lang.org/api/HTTP/Request.html).
     alias Request = Athena::Framework::Request
   {% else %}
-    # Represents the type of the *request* parameter within `ART::Route::Condition`.
+    # Represents the type of the *request* parameter within an `ART::Route::Condition`.
     #
     # Will be an `ATH::Request` instance if used within the Athena Framework, otherwise [HTTP::Request](https://crystal-lang.org/api/HTTP/Request.html).
     alias Request = HTTP::Request
   {% end %}
 
+  # Includes types related to generating URLs.
+  module Generator; end
+
+  # Includes types related to matching a path/request to a route.
+  module Matcher; end
+
+  # Both acts as a namespace for exceptions related to the `Athena::Routing` component, as well as a way to check for exceptions from the component.
   module Exception; end
 
   def self.compile(routes : ART::RouteCollection) : Nil
