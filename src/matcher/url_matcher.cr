@@ -1,5 +1,6 @@
 require "./url_matcher_interface"
 
+# Default implementation of `ART::Matcher::RequestMatcherInterface` and `ART::Matcher::URLMatcherInterface`.
 class Athena::Routing::Matcher::URLMatcher
   include Athena::Routing::Matcher::RequestMatcherInterface
   include Athena::Routing::Matcher::URLMatcherInterface
@@ -10,12 +11,14 @@ class Athena::Routing::Matcher::URLMatcher
 
   def initialize(@context : ART::RequestContext); end
 
+  # :inherit:
   def match(@request : ART::Request) : Hash(String, String?)
     self.match @request.not_nil!.path
   ensure
     @request = nil
   end
 
+  # :inherit:
   def match(path : String) : Hash(String, String?)
     allow = Array(String).new
     allow_schemes = Array(String).new

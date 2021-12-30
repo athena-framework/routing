@@ -18,6 +18,7 @@ require "./matcher/*"
 # Convenience alias to make referencing `Athena::Routing` types easier.
 alias ART = Athena::Routing
 
+# Convenience alias to make referencing `ART::Annotations` types easier.
 alias ARTA = ART::Annotations
 
 # Athena's Routing component, `ART` for short, allows mapping HTTP requests to particular `ART::Route`s.
