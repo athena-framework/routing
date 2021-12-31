@@ -1,4 +1,4 @@
-name: athena-COMPONENT_NAME
+name: athena-routing
 
 version: 0.1.0
 
@@ -6,17 +6,23 @@ crystal: '>= 0.36.0'
 
 license: MIT
 
-repository: https://github.com/athena-framework/COMPONENT_NAME
+repository: https://github.com/athena-framework/routing
 
-documentation: https://athenaframework.org/NAMESPACE_NAME
-
+documentation: https://athenaframework.org/Routing
+ 
 description: |
-  DESCRIPTION.
+  HTTP based routing library/framework.
 
 authors:
-  - CREATOR_NAME <CREATOR_EMAIL>
+  - George Dietrich <george@dietrich.app>
+
+libraries:
+  libpcre2: '*'
 
 development_dependencies:
   ameba:
     github: crystal-ameba/ameba
     version: ~> 0.14.0
+  athena-spec:
+    github: athena-framework/spec
+    version: ~> 0.2.3
