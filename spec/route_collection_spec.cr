@@ -7,7 +7,6 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection.add "foo", route
     collection.routes.should eq({"foo" => route})
     collection["foo"].should be route
-    collection["foo"].should be route
     collection["foo"]?.should be route
 
     collection["bar"]?.should be_nil
@@ -17,7 +16,7 @@ struct RouteCollectionTest < ASPEC::TestCase
     end
   end
 
-  def test_overridden_rotue : Nil
+  def test_overridden_route : Nil
     collection = ART::RouteCollection.new
     route1 = ART::Route.new "/foo"
     route2 = ART::Route.new "/bar"
@@ -28,7 +27,7 @@ struct RouteCollectionTest < ASPEC::TestCase
     collection["foo"].should be route2
   end
 
-  def test_deep_overridden_rotue : Nil
+  def test_deep_overridden_route : Nil
     collection = ART::RouteCollection.new
     collection.add "foo", ART::Route.new "/foo"
 
