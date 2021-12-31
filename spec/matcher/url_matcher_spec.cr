@@ -13,6 +13,14 @@ struct URLMatcherTest < ASPEC::TestCase
     self.get_matcher(routes).match("/foo").should eq({"_route" => "foo"})
   end
 
+  def test_match_request : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo"
+    end
+
+    self.get_matcher(routes).match(HTTP::Request.new "GET", "/foo").should eq({"_route" => "foo"})
+  end
+
   def test_match_method_not_allowed : Nil
     routes = self.build_collection do
       add "foo", ART::Route.new "/foo", methods: "post"
@@ -23,6 +31,22 @@ struct URLMatcherTest < ASPEC::TestCase
     end
 
     ex.allowed_methods.should eq ["POST"]
+  end
+
+  def test_nilable_match_method_not_allowed : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo", methods: "post"
+    end
+
+    self.get_matcher(routes).match?("/foo").should be_nil
+  end
+
+  def test_nilable_match_request_method_not_allowed : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo", methods: "post"
+    end
+
+    self.get_matcher(routes).match?(HTTP::Request.new("GET", "/foo")).should be_nil
   end
 
   def test_match_method_not_allowed_root : Nil
@@ -56,6 +80,22 @@ struct URLMatcherTest < ASPEC::TestCase
     end
 
     ex.allowed_methods.should eq ["POST", "PUT", "DELETE"]
+  end
+
+  def test_nilable_match_returns_matched_pattern : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{bar}"
+    end
+
+    self.get_matcher(routes).match?("/no-match").should be_nil
+  end
+
+  def test_nilable_match_request_returns_matched_pattern : Nil
+    routes = self.build_collection do
+      add "foo", ART::Route.new "/foo/{bar}"
+    end
+
+    self.get_matcher(routes).match?(HTTP::Request.new "GET", "/no-match").should be_nil
   end
 
   def test_match_returns_matched_pattern : Nil

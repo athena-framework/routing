@@ -26,4 +26,10 @@ module Athena::Routing::Matcher::URLMatcherInterface
   #
   # Raises an `ART::Exception::MethodNotAllowed` if a route exists but not for the current HTTP method.
   abstract def match(path : String) : Hash(String, String?)
+
+  # Tries to match the provided *path* to its related route.
+  # Returns a hash of the route's defaults and parameters resolved from the *path*.
+  #
+  # Returns `nil` if no route could be matched or a route exists but not for the current HTTP method.
+  abstract def match?(path : String) : Hash(String, String?)?
 end

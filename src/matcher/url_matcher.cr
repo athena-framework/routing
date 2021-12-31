@@ -19,6 +19,13 @@ class Athena::Routing::Matcher::URLMatcher
   end
 
   # :inherit:
+  def match?(@request : ART::Request) : Hash(String, String?)?
+    self.match? @request.not_nil!.path
+  ensure
+    @request = nil
+  end
+
+  # :inherit:
   def match(path : String) : Hash(String, String?)
     allow = Array(String).new
     allow_schemes = Array(String).new
@@ -32,6 +39,11 @@ class Athena::Routing::Matcher::URLMatcher
     end
 
     raise ART::Exception::ResourceNotFound.new "No routes found for '#{path}'."
+  end
+
+  # :inherit:
+  def match?(path : String) : Hash(String, String?)?
+    self.do_match path, Array(String).new, Array(String).new
   end
 
   # ameba:disable Metrics/CyclomaticComplexity
